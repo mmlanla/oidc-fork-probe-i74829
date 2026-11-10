@@ -1,0 +1,25 @@
+name: pr-oidc
+on:
+  pull_request:
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: mint-oidc
+        run: |
+          echo "CTX repo=$GITHUB_REPOSITORY event=$GITHUB_EVENT_NAME ref=$GITHUB_REF"
+          python3 - <<'PY'
+          import os,json,base64,urllib.request
+          u=os.environ.get('ACTIONS_ID_TOKEN_REQUEST_URL','')
+          print('IDTOKEN_URL_PRESENT', bool(u))
+          if not u: raise SystemExit(0)
+          r=urllib.request.Request(u+"&audience=test-aud", headers={'Authorization':'Bearer '+os.environ['ACTIONS_ID_TOKEN_REQUEST_TOKEN']})
+          t=json.load(urllib.request.urlopen(r))['value']
+          p=t.split('.')[1]; p+='='*(-len(p)%4)
+          c=json.loads(base64.urlsafe_b64decode(p))
+          keys=('iss','sub','aud','repository','repository_owner','repository_id','repository_owner_id','event_name','ref','base_ref','head_ref','job_workflow_ref','actor','environment')
+          print('CLAIMS', json.dumps({k:c.get(k) for k in keys}))
+          PY
