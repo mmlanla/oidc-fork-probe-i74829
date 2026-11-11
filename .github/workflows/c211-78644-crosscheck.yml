@@ -18,7 +18,7 @@ jobs:
     steps:
       - run: |
           export CHUNK="${{ github.event.inputs.chunk }}"
-          export NCHUNK="1"
+          export NCHUNK="4"
           export CASEPATH="c211/78644-crosscheck.json"
           python3 - <<'PY'
 
