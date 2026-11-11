@@ -13,6 +13,8 @@ jobs:
   t:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - run: |
           export CHUNK="${{ github.event.inputs.chunk }}"
