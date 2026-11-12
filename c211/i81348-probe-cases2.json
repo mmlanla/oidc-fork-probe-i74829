@@ -1,0 +1,389 @@
+{
+ "gcp": [
+  {
+   "provider": "projects/1009389616043/locations/global/workloadIdentityPools/cumulus-trust-engine-pool/providers/cumulus-trust-engine-pool-prvdr",
+   "sas": [],
+   "src": "System-Trust/cumulus-token-generator::.deploy/stage.env.yaml"
+  },
+  {
+   "provider": "projects/1009389616043/locations/global/workloadIdentityPools/policy-bundles-gh-actions/providers/policy-bundles-gh-actions",
+   "sas": [
+    "pb-staging-123456789abcdef0123@sap-cumulus-store-staging.iam.gserviceaccount.com",
+    "pb-dev-70b4afbae14723a687d938a@sap-cumulus-store-dev.iam.gserviceaccount.com",
+    "pb-prod-2e0f5e62eb2bb3e43af280@sap-cumulus-store-prod.iam.gserviceaccount.com",
+    "pb-dev-123456789abcdef01234567@sap-cumulus-store-dev.iam.gserviceaccount.com"
+   ],
+   "src": "I501735/ua-090::.github/workflows/main.yml"
+  },
+  {
+   "provider": "projects/1012454993346/locations/global/workloadIdentityPools/github/providers/github",
+   "sas": [
+    "whitelists-drone@sap-tools-prod-int-ghe.iam.gserviceaccount.com",
+    "whitelists-drone@sap-tools-stage-int-ghe.iam.gserviceaccount.com",
+    "whitelists-drone@sap-tools-dev-int-ghe.iam.gserviceaccount.com"
+   ],
+   "src": "github/webhook-domains::.github/workflows/update-gcp-buckets-wdf.yml"
+  },
+  {
+   "provider": "projects/1015480253086/locations/global/workloadIdentityPools/gha-gcp-cred-rotate/providers/github-gcp-vm-cred-rotate",
+   "sas": [
+    "awx-ssh-ariba-global-dev@ariba-global-dev.iam.gserviceaccount.com"
+   ],
+   "src": "ISBNCloudOps/ariba-gcp-vm-cred-rotate::.github/workflows/key-rotation.yml"
+  },
+  {
+   "provider": "projects/1022736655819/locations/global/workloadIdentityPools/github-mcp-generic/providers/gha-wdf-github-mcp",
+   "sas": [
+    "github-automations@sap-pi-ops-tools-prod-github.iam.gserviceaccount.com"
+   ],
+   "src": "github/tools-github-mcp::.github/workflows/piper.yaml"
+  },
+  {
+   "provider": "projects/1039747416360/locations/global/workloadIdentityPools/github-gcp-teams-storage/providers/github-provider-teams-storage",
+   "sas": [
+    "gcp-alerts-teams-runtime@sap-gcp-dxp-prod.iam.gserviceaccount.com",
+    "gcp-alerts-teams-runtime@sap-cp-cockpit-frame-dev.iam.gserviceaccount.com",
+    "gcp-alerts-teams-runtime@sap-gcp-dxp-int.iam.gserviceaccount.com",
+    "gcp-alerts-teams-deployer@sap-gcp-dxp-prod.iam.gserviceaccount.com"
+   ],
+   "src": "dxp/gcp-alerts-to-teams::.github/workflows/deploy-cloudrun.yml"
+  },
+  {
+   "provider": "projects/1044110606357/locations/global/workloadIdentityPools/github-pool/providers/github-provider",
+   "sas": [
+    "deploy@ems-gap-plugins-app-conn-s.iam.gserviceaccount.com"
+   ],
+   "src": "Emartech/magento2-extension-snippet-js::.github/workflows/main.yaml"
+  },
+  {
+   "provider": "projects/123933666465/locations/global/workloadIdentityPools/github-pool/providers/github-provider",
+   "sas": [
+    "deploy@ems-gap-plugins-app-conn-p.iam.gserviceaccount.com"
+   ],
+   "src": "Emartech/magento2-extension-snippet-js::.github/workflows/production.yaml"
+  },
+  {
+   "provider": "projects/209238640650/locations/global/workloadIdentityPools/github-actions/providers/github-oidc",
+   "sas": [
+    "github-actions-containerupload@sap-cla-assistant.iam.gserviceaccount.com"
+   ],
+   "src": "OSPO/cla-assistant-internal::.github/workflows/build.yml"
+  },
+  {
+   "provider": "projects/224358829220/locations/global/workloadIdentityPools/github-mcp-generic/providers/gha-tools-github-mcp",
+   "sas": [
+    "github-automations@sap-pi-ops-tools-prod-github.iam.gserviceaccount.com"
+   ],
+   "src": "github/tools-github-mcp::.github/workflows/piper.yaml"
+  },
+  {
+   "provider": "projects/224430465839/locations/global/workloadIdentityPools/cumulus-trust-engine-pool/providers/cumulus-trust-engine-pool-prvdr",
+   "sas": [],
+   "src": "System-Trust/cumulus-token-generator::.deploy/prod.env.yaml"
+  },
+  {
+   "provider": "projects/224430465839/locations/global/workloadIdentityPools/policy-bundles-gh-actions/providers/policy-bundles-gh-actions",
+   "sas": [
+    "pb-staging-123456789abcdef0123@sap-cumulus-store-staging.iam.gserviceaccount.com",
+    "pb-dev-70b4afbae14723a687d938a@sap-cumulus-store-dev.iam.gserviceaccount.com",
+    "pb-prod-2e0f5e62eb2bb3e43af280@sap-cumulus-store-prod.iam.gserviceaccount.com",
+    "pb-dev-123456789abcdef01234567@sap-cumulus-store-dev.iam.gserviceaccount.com"
+   ],
+   "src": "I501735/ua-090::.github/workflows/main.yml"
+  },
+  {
+   "provider": "projects/226134760031/locations/global/workloadIdentityPools/github-mcp-generic/providers/gha-tools-github-mcp",
+   "sas": [
+    "github-automations@sap-pi-ops-tools-prod-github.iam.gserviceaccount.com"
+   ],
+   "src": "github/tools-github-mcp::.github/workflows/piper.yaml"
+  },
+  {
+   "provider": "projects/235978684667/locations/global/workloadIdentityPools/github-tools/providers/notebooklm-permissions",
+   "sas": [],
+   "src": "scs-services/notebooklm-permissions::.github/workflows/apply.yaml"
+  },
+  {
+   "provider": "projects/245587164575/locations/global/workloadIdentityPools/automaticd-cumulus/providers/dev-ext-auto-provider",
+   "sas": [
+    "automaticd-cumulus@sap-hyper-ext-dev.iam.gserviceaccount.com"
+   ],
+   "src": "automaticd/automaticd::shared/gcloud/federation/federtation_test.go"
+  },
+  {
+   "provider": "projects/252741644069/locations/global/workloadIdentityPools/automaticd-cumulus/providers/prod-ext-auto-provider",
+   "sas": [
+    "automaticd-cumulus@sap-hyper-ext-prod.iam.gserviceaccount.com"
+   ],
+   "src": "automaticd/cumulus-operator::config/argoApp-prod.yaml"
+  },
+  {
+   "provider": "projects/283550248967/locations/global/workloadIdentityPools/cki-gha/providers/github-actions",
+   "sas": [
+    "korifi-automation@cf-k8s-concept-car-eu-10-dev.iam.gserviceaccount.com"
+   ],
+   "src": "I505947/korifi-automation::.github/actions/init/action.yaml"
+  },
+  {
+   "provider": "projects/303198336414/locations/global/workloadIdentityPools/github-pool/providers/github",
+   "sas": [
+    "terraform-ci@gcp-monitoringhnaxdcmcsnaqydxh.iam.gserviceaccount.com"
+   ],
+   "src": "gcs-sre/infrastructure::.github/workflows/infra-gardener.yaml"
+  },
+  {
+   "provider": "projects/319952407973/locations/global/workloadIdentityPools/github-pool/providers/github-pool",
+   "sas": [
+    "vault-gcp-auth@sap-spc-artifactory.iam.gserviceaccount.com",
+    "artifactory-prod-sa@sap-spc-artifactory.iam.gserviceaccount.com",
+    "nginx-mig@sap-spc-artifactory.iam.gserviceaccount.com",
+    "gardener-live-cr@sap-spc-artifactory.iam.gserviceaccount.com"
+   ],
+   "src": "Common-Repository/Artifactory-Handbook::docs/internal/operations/tasks/main/management-github-repos-and-gcp-sa.md"
+  },
+  {
+   "provider": "projects/395478287999/locations/global/workloadIdentityPools/github-actions/providers/github-actions",
+   "sas": [
+    "firebase-test-lab-service-acco@ems-mobile-sdk.iam.gserviceaccount.com"
+   ],
+   "src": "Emartech/android-emarsys-sdk::.github/workflows/nightly_e2e_workflow.yml"
+  },
+  {
+   "provider": "projects/421084984826/locations/global/workloadIdentityPools/widf-pool/providers/gh-tools-vault-namespaces",
+   "sas": [],
+   "src": "I508774/vault-namespace-example1::.deploy/prod.env.yaml"
+  },
+  {
+   "provider": "projects/44526855640/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider",
+   "sas": [
+    "github-actions-sa@sap-clm-analytics-master.iam.gserviceaccount.com"
+   ],
+   "src": "upgrade-analytics/ida-resources::.github/workflows/agent-sync.yml"
+  },
+  {
+   "provider": "projects/472323843224/locations/global/workloadIdentityPools/solinas-iac/providers/gha-solinas-infra",
+   "sas": [],
+   "src": "solinas/solinas-infra::terraform-scripts/TF_FOUNDATION/README.md"
+  },
+  {
+   "provider": "projects/52810142666/locations/global/workloadIdentityPools/automaticd/providers/stage-ext-auto-provider",
+   "sas": [
+    "automaticd-cumulus@sap-hyper-ext-stage.iam.gserviceaccount.com"
+   ],
+   "src": "automaticd/cumulus-operator::config/argoApp-stage.yaml"
+  },
+  {
+   "provider": "projects/540567043857/locations/global/workloadIdentityPools/github/providers/github",
+   "sas": [
+    "whitelists-drone@sap-tools-prod-int-ghe.iam.gserviceaccount.com",
+    "github-actions-mirror@sap-tools-prod-int-ghe.iam.gserviceaccount.com",
+    "whitelists-drone@sap-tools-stage-int-ghe.iam.gserviceaccount.com",
+    "prod-tussi-deploy-sa@sap-tools-prod-int-ghe.iam.gserviceaccount.com"
+   ],
+   "src": "github/actions-mirror::.github/workflows/mirror-custom-actions-to-wdf.yml"
+  },
+  {
+   "provider": "projects/557404461300/locations/global/workloadIdentityPools/cumulus-cicd-gh-actions/providers/cumulus-cicd-gh-actions",
+   "sas": [
+    "cumulus-cicd@sap-cumulus-dev.iam.gserviceaccount.com"
+   ],
+   "src": "P4TEAM/cumulus-github-actions::.github/workflows/google-cloud-run-deploy.yml"
+  },
+  {
+   "provider": "projects/558737515180/locations/global/workloadIdentityPools/github-tools-sap/providers/github-tools-sap-d067570",
+   "sas": [],
+   "src": "D067570-playground/gha-to-gcp-image-upload::.github/workflows/upload.yaml"
+  },
+  {
+   "provider": "projects/558952423315/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider",
+   "sas": [
+    "github-actions-sa@sap-clm-pm-dev.iam.gserviceaccount.com"
+   ],
+   "src": "upgrade-analytics-archive/proactive-maintenance-app::.github/workflows/pipeline.yml"
+  },
+  {
+   "provider": "projects/564170613824/locations/global/workloadIdentityPools/github/providers/github",
+   "sas": [
+    "github-automations@sap-pi-ops-tools-prod-github.iam.gserviceaccount.com",
+    "whitelists-drone@sap-pi-ops-tools-dev-github.iam.gserviceaccount.com",
+    "whitelists-drone@sap-pi-ops-tools-stage-github.iam.gserviceaccount.com",
+    "whitelists-drone@sap-pi-ops-tools-prod-github.iam.gserviceaccount.com"
+   ],
+   "src": "github/notification-proxy::.github/workflows/cicd.yaml"
+  },
+  {
+   "provider": "projects/565259001972/locations/global/workloadIdentityPools/sap-enterprise-github-pool/providers/github-tools-sap",
+   "sas": [
+    "tokenization-service-ci@cp-k8s-s9s-runtime-eu-stage.iam.gserviceaccount.com",
+    "tokenization-service-ci@cp-k8s-s9s-runtime-eu-cnry.iam.gserviceaccount.com"
+   ],
+   "src": "s9s/tokenization-service::.github/workflows/integration-regression-tests.yml"
+  },
+  {
+   "provider": "projects/635243335531/locations/global/workloadIdentityPools/databricks/providers/databricks-github-dev",
+   "sas": [
+    "databricks-provisioner-dev@sap-mc-gcp-dev.iam.gserviceaccount.com"
+   ],
+   "src": "I753903/terraform-databricks-gcp::docs/superpowers/specs/2026-05-29-github-actions-ci-design.md"
+  },
+  {
+   "provider": "projects/674094498735/locations/global/workloadIdentityPools/github/providers/github",
+   "sas": [
+    "whitelists-drone@sap-pi-ops-tools-stage-github.iam.gserviceaccount.com",
+    "whitelists-drone@sap-pi-ops-tools-dev-github.iam.gserviceaccount.com",
+    "whitelists-drone@sap-pi-ops-tools-prod-github.iam.gserviceaccount.com"
+   ],
+   "src": "github/webhook-domains::.github/workflows/update-gcp-buckets-tools.yml"
+  },
+  {
+   "provider": "projects/676890747924/locations/global/workloadIdentityPools/github-mcp-generic/providers/gha-wdf-github-mcp",
+   "sas": [
+    "github-automations@sap-pi-ops-tools-prod-github.iam.gserviceaccount.com"
+   ],
+   "src": "github/tools-github-mcp::.github/workflows/piper.yaml"
+  },
+  {
+   "provider": "projects/681965777575/locations/global/workloadIdentityPools/sap-ems-base-infra-iac-pool/providers/github-provider",
+   "sas": [
+    "infra-hub-cnt-optin-sync-tf-sa@sap-ems-base-infra-iac.iam.gserviceaccount.com"
+   ],
+   "src": "engagementcloud/octopus-contact-change-offboarding-filter::.github/workflows/build-and-push-images.yml"
+  },
+  {
+   "provider": "projects/681965777575/locations/global/workloadIdentityPools/sap-tools-ghe-pool/providers/sap-tools-ghe-provider",
+   "sas": [
+    "infra-hub-sap-tools-ghe-tf-sa@sap-ems-base-infra-iac.iam.gserviceaccount.com"
+   ],
+   "src": "engagementcloud/piper-gpp-extensions::postRelease/action.yml"
+  },
+  {
+   "provider": "projects/690123255331/locations/global/workloadIdentityPools/widf-pool/providers/gh-tools-vault-namespaces",
+   "sas": [],
+   "src": "I508774/vault-namespace-example1::.deploy/stage.env.yaml"
+  },
+  {
+   "provider": "projects/700861955789/locations/global/workloadIdentityPools/github/providers/github",
+   "sas": [
+    "whitelists-drone@sap-pi-ops-tools-stage-github.iam.gserviceaccount.com",
+    "whitelists-drone@sap-pi-ops-tools-dev-github.iam.gserviceaccount.com",
+    "whitelists-drone@sap-pi-ops-tools-prod-github.iam.gserviceaccount.com"
+   ],
+   "src": "github/webhook-domains::.github/workflows/update-gcp-buckets-tools.yml"
+  },
+  {
+   "provider": "projects/71803351321/locations/global/workloadIdentityPools/github-gcp-teams-storage/providers/github-provider-teams-storage",
+   "sas": [
+    "gcp-alerts-teams-runtime@sap-gcp-dxp-prod.iam.gserviceaccount.com",
+    "gcp-alerts-teams-runtime@sap-cp-cockpit-frame-dev.iam.gserviceaccount.com",
+    "gcp-alerts-teams-runtime@sap-gcp-dxp-int.iam.gserviceaccount.com",
+    "gcp-alerts-teams-deployer@sap-gcp-dxp-prod.iam.gserviceaccount.com"
+   ],
+   "src": "dxp/gcp-alerts-to-teams::.github/workflows/deploy-cloudrun.yml"
+  },
+  {
+   "provider": "projects/727270599349/locations/global/workloadIdentityPools/github-tools-sap-3/providers/github-tools-sap-3",
+   "sas": [
+    "crispy-spoon-image-builder@sap-kyma-neighbors-dev.iam.gserviceaccount.com"
+   ],
+   "src": "neighbors-team/ibtest::README.md"
+  },
+  {
+   "provider": "projects/729951770875/locations/global/workloadIdentityPools/cumulus-trust-engine-pool/providers/cumulus-trust-engine-pool-prvdr",
+   "sas": [],
+   "src": "System-Trust/cumulus-token-generator::.deploy/dev.env.yaml"
+  },
+  {
+   "provider": "projects/729951770875/locations/global/workloadIdentityPools/policy-bundles-gh-actions/providers/policy-bundles-gh-actions",
+   "sas": [
+    "pb-staging-123456789abcdef0123@sap-cumulus-store-staging.iam.gserviceaccount.com",
+    "pb-dev-70b4afbae14723a687d938a@sap-cumulus-store-dev.iam.gserviceaccount.com",
+    "pb-prod-2e0f5e62eb2bb3e43af280@sap-cumulus-store-prod.iam.gserviceaccount.com",
+    "pb-dev-123456789abcdef01234567@sap-cumulus-store-dev.iam.gserviceaccount.com"
+   ],
+   "src": "I501735/ua-090::.github/workflows/main.yml"
+  },
+  {
+   "provider": "projects/748920598802/locations/global/workloadIdentityPools/automaticd-cumulus/providers/stage-ext-auto-provider",
+   "sas": [
+    "automaticd-cumulus@sap-hyper-ext-stage.iam.gserviceaccount.com"
+   ],
+   "src": "automaticd/cumulus-operator::config/argoApp-stage.yaml"
+  },
+  {
+   "provider": "projects/836768980122/locations/global/workloadIdentityPools/github-tools/providers/notebooklm-permissions",
+   "sas": [],
+   "src": "scs-services/notebooklm-permissions::.github/workflows/apply.yaml"
+  },
+  {
+   "provider": "projects/840145926385/locations/global/workloadIdentityPools/automaticd/providers/prod-ext-auto-provider",
+   "sas": [
+    "automaticd-cumulus@sap-hyper-ext-prod.iam.gserviceaccount.com"
+   ],
+   "src": "automaticd/cumulus-operator::config/argoApp-prod.yaml"
+  },
+  {
+   "provider": "projects/902560712696/locations/global/workloadIdentityPools/github-actions-tools/providers/github-actions",
+   "sas": [
+    "gcr-push@sap-gcp-dxp-prod.iam.gserviceaccount.com",
+    "gcr-pull@sap-gcp-dxp-prod.iam.gserviceaccount.com"
+   ],
+   "src": "dxp/.github::.github/workflows/chart-publish.yaml"
+  },
+  {
+   "provider": "projects/902560712696/locations/global/workloadIdentityPools/github-gcp-teams-storage/providers/github-provider-teams-storage",
+   "sas": [
+    "gcp-alerts-teams-runtime@sap-gcp-dxp-prod.iam.gserviceaccount.com",
+    "gcp-alerts-teams-runtime@sap-cp-cockpit-frame-dev.iam.gserviceaccount.com",
+    "gcp-alerts-teams-runtime@sap-gcp-dxp-int.iam.gserviceaccount.com",
+    "gcp-alerts-teams-deployer@sap-gcp-dxp-prod.iam.gserviceaccount.com"
+   ],
+   "src": "dxp/gcp-alerts-to-teams::.github/workflows/deploy-cloudrun.yml"
+  },
+  {
+   "provider": "projects/92673611208/locations/global/workloadIdentityPools/sap-enterprise-github-pool/providers/github-tools-sap",
+   "sas": [
+    "tokenization-service-ci@cp-k8s-s9s-runtime-eu-cnry.iam.gserviceaccount.com",
+    "s9s-tool-publisher@cp-k8s-s9s-runtime-eu-stage.iam.gserviceaccount.com",
+    "tokenization-service-ci@cp-k8s-s9s-runtime-eu-stage.iam.gserviceaccount.com",
+    "s9s-tool-publisher@cp-k8s-s9s-runtime-eu-prod.iam.gserviceaccount.com"
+   ],
+   "src": "s9s/tokenization-service::.github/workflows/integration-regression-tests.yml"
+  },
+  {
+   "provider": "projects/931881841608/locations/global/workloadIdentityPools/github/providers/github",
+   "sas": [
+    "whitelists-drone@sap-tools-prod-int-ghe.iam.gserviceaccount.com",
+    "whitelists-drone@sap-tools-stage-int-ghe.iam.gserviceaccount.com",
+    "dev-tussi-deploy-sa@sap-tools-dev-int-ghe.iam.gserviceaccount.com",
+    "whitelists-drone@sap-tools-dev-int-ghe.iam.gserviceaccount.com"
+   ],
+   "src": "github/tussi::.github/workflows/rotation-sql-user-pswd-wdf-dev.yml"
+  },
+  {
+   "provider": "projects/933531179415/locations/global/workloadIdentityPools/github-tools-actions-ospo/providers/github-actions",
+   "sas": [
+    "ospo-renovate-ldap-sync@sap-cto-architecture.iam.gserviceaccount.com",
+    "github-actions-container-uploa@sap-cto-architecture.iam.gserviceaccount.com",
+    "renovate-metrics-writer@sap-cto-architecture.iam.gserviceaccount.com"
+   ],
+   "src": "OSPO-Experiment/ospo-experiment-core::.github/workflows/build.yml"
+  },
+  {
+   "provider": "projects/934901217922/locations/global/workloadIdentityPools/automaticd/providers/dev-ext-auto-provider",
+   "sas": [
+    "automaticd-cumulus@sap-hyper-ext-dev.iam.gserviceaccount.com"
+   ],
+   "src": "automaticd/cumulus-operator::config/argoApp-dev.yaml"
+  },
+  {
+   "provider": "projects/942032056901/locations/global/workloadIdentityPools/sap-enterprise-github-pool/providers/github-tools-sap",
+   "sas": [
+    "s9s-tool-publisher@cp-k8s-s9s-runtime-eu-prod.iam.gserviceaccount.com",
+    "s9s-tool-publisher@cp-k8s-s9s-runtime-eu-stage.iam.gserviceaccount.com"
+   ],
+   "src": "s9s/tools::.github/workflows/publish-s9s.yaml"
+  }
+ ],
+ "aws": [],
+ "azure": []
+}
