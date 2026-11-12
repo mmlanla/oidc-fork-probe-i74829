@@ -1,0 +1,1059 @@
+{
+ "aws": [
+  {
+   "arn": "arn:aws:iam::029834228393:role/container-hosting-api-prod",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "container-hosting/infra::landscapes/prod/mcp/aws/iam/api-role.yaml"
+  },
+  {
+   "arn": "arn:aws:iam::029834228393:role/container-hosting-api-prod-ecr-pull",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "container-hosting/infra::landscapes/prod/mcp/aws/iam/api-role.yaml"
+  },
+  {
+   "arn": "arn:aws:iam::054157087603:role/GitHub-Action-Container-Registry-Writer",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "gardener/cc-utils::.github/actions/oci-auth/oidc-cfgs.yaml"
+  },
+  {
+   "arn": "arn:aws:iam::059415732690:role/role-reltio.platform.data-ingestion-service.qa",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "reltio/data-ingestion-service::data-ingestion-common/src/test/java/com/reltio/services/common/connector/util/AwsUtilTest.java"
+  },
+  {
+   "arn": "arn:aws:iam::059415732690:role/role-reltio.platform.dis-ddb-extra-hop.qa",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "reltio/data-ingestion-service::data-ingestion-common/src/test/java/com/reltio/services/common/connector/util/AwsUtilTest.java"
+  },
+  {
+   "arn": "arn:aws:iam::077144523031:role/gardener-canary-provider-irsa",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "service-tip-git-serviceuser/turbobot::docs/infra/knowledge-base/gardener-credential-via-workload-identity-federation.md"
+  },
+  {
+   "arn": "arn:aws:iam::106403001814:role/github-terraform-role",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "gcs-sre/infrastructure::tf/terraform_backend_architecture.md"
+  },
+  {
+   "arn": "arn:aws:iam::108771709581:role/lighthouse-reader",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "Data-Platform-Engineering/lighthouse::config/config.yaml.example"
+  },
+  {
+   "arn": "arn:aws:iam::125903112160:role/SAP_Role_CTO_Raven_BFF_Terraform_GHA",
+   "auds": [
+    "sts.amazonaws.com",
+    "https://github.tools.sap"
+   ],
+   "src": "raven/raven-operations::.github/workflows/rotate-gh-pat.yml"
+  },
+  {
+   "arn": "arn:aws:iam::127556319166:role/svc-baip-cdc-cloudmonitor",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "CDC/tf_gigya::mg1/cloudmonitor/main.tf"
+  },
+  {
+   "arn": "arn:aws:iam::148000426364:role/cxpe-gha-oidc-poc-role",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "sap-community/poc-oidc::.github/workflows/pocaws.yml"
+  },
+  {
+   "arn": "arn:aws:iam::166488238954:role/Gardener",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "I553717/co-poc-installer::setup-v2/12-workload-identity.md"
+  },
+  {
+   "arn": "arn:aws:iam::175142243308:role/official_gha_cicd",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "docker/build-push-action::.github/workflows/.e2e-run.yml"
+  },
+  {
+   "arn": "arn:aws:iam::175142243308:role/official_gha_cicd_login_action",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "docker/login-action::.github/workflows/ci.yml"
+  },
+  {
+   "arn": "arn:aws:iam::221038579276:role/DeploymentAccessRoleOIDC",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "signavio-cloudos/mcp-bootstrap::.github/workflows/oidc-test.yaml"
+  },
+  {
+   "arn": "arn:aws:iam::235229002422:role/installer-auto-1.",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "I553717/co-poc-installer::operator/internal/steps/prepare_account_automator/step.go"
+  },
+  {
+   "arn": "arn:aws:iam::251637920682:role/GitHub-Action-Container-Registry-Writer",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "gardener/cc-utils::.github/actions/oci-auth/oidc-cfgs.yaml"
+  },
+  {
+   "arn": "arn:aws:iam::254800099218:role/mlplatform-rtdq-role-dqds-xacct-reltio-1",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "reltio/app-runtime::cloud.reltio.com/aws/template-cloud-iam/app/role-reltio-platform-dataquality-snapshot.tf"
+  },
+  {
+   "arn": "arn:aws:iam::258441767826:role/artillery-github-actions",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "omf/omf-central-order-artillery-scripts::.github/workflows/artillery-run-fargate.yml"
+  },
+  {
+   "arn": "arn:aws:iam::258441767826:role/artillery-github-actions-on-ramp",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "OMS/oms-onramp-artillery-scripts::.github/workflows/artillery-run-on-fargate.yml"
+  },
+  {
+   "arn": "arn:aws:iam::294500578389:role/jenkins-ui-assets-upload",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "dremio-temp/dremio-cody-test-5::Jenkinsfile"
+  },
+  {
+   "arn": "arn:aws:iam::335169716315:role/SAP_Role_CTO_Raven_BFF_Terraform_GHA",
+   "auds": [
+    "sts.amazonaws.com",
+    "https://github.tools.sap"
+   ],
+   "src": "raven/raven-operations::.github/workflows/rotate-gh-pat.yml"
+  },
+  {
+   "arn": "arn:aws:iam::335643306733:role/CS_AWS_HANA_BACKUP_FOR_TA",
+   "auds": [
+    "sts.amazonaws.com",
+    "hana-backup"
+   ],
+   "src": "b1/b1ce-localized-demodb::.github/workflows/backup-db.yaml"
+  },
+  {
+   "arn": "arn:aws:iam::335643306733:role/CS_AWS_HANA_BACKUP_RO",
+   "auds": [
+    "sts.amazonaws.com",
+    "hana-backup"
+   ],
+   "src": "b1/b1-operations::.github/workflows/list-b1-backups-aws.yaml"
+  },
+  {
+   "arn": "arn:aws:iam::335785316107:role/litellm-github-unit-tests-circleci",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "AI-innovations/litellm-private::docs/my-website/docs/oidc.md"
+  },
+  {
+   "arn": "arn:aws:iam::339713123293:role/exa-terraform",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "experience-agent/end_user_portal-terraform::.github/workflows/terraform-drift.yml"
+  },
+  {
+   "arn": "arn:aws:iam::355291130670:role/ghaction-oidc-role",
+   "auds": [
+    "sts.amazonaws.com",
+    "iam-accesskey-autorotation"
+   ],
+   "src": "saplanguageplatform/operations::.github/actions/rotate-iam-access-keys/action.yml"
+  },
+  {
+   "arn": "arn:aws:iam::357745610703:role/cdc_gigya_trino_backup_role",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "CDC/tf_gigya::global_infrastructure/global_aws_infrastructure/IAM_management/iam_role.tf"
+  },
+  {
+   "arn": "arn:aws:iam::357745610703:role/svc-baip-cdc-cloudmonitor",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "CDC/tf_gigya::mg1/cloudmonitor/main.tf"
+  },
+  {
+   "arn": "arn:aws:iam::366351268903:role/cdc_gigya_loper_role",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "CDC/tf_gigya::mg1/cloudmonitor-us10-dev/main.tf"
+  },
+  {
+   "arn": "arn:aws:iam::366351268903:role/svc-baip-cdc-cloudmonitor",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "CDC/tf_gigya::mg1/cloudmonitor/main.tf"
+  },
+  {
+   "arn": "arn:aws:iam::388376138984:role/eu-central-1-delete-available-volumes",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "dts-apimgmt-concourse-dev/delete-available-volumes::envs/terraform.tfstate.d/eu-central-1/terraform.tfstate.backup"
+  },
+  {
+   "arn": "arn:aws:iam::388376138984:role/us-west-2-delete-available-volumes",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "dts-apimgmt-concourse-dev/delete-available-volumes::envs/terraform.tfstate.d/us-west-2/terraform.tfstate"
+  },
+  {
+   "arn": "arn:aws:iam::411194267397:role/mlplatform-rtdq-role-dqds-xacct-reltio",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "reltio/app-runtime::cloud.reltio.com/aws/template-cloud-iam/app/role-reltio-platform-dataquality-snapshot.tf"
+  },
+  {
+   "arn": "arn:aws:iam::442956084024:role/svc-baip-cdc-cloudmonitor",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "CDC/tf_gigya::mg1/cloudmonitor/main.tf"
+  },
+  {
+   "arn": "arn:aws:iam::446780759429:role/oidc-image-pull-role",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "D064687/notes::blogs/image-pull-secrets-for-aws-using-kubernetes-service-accounts/blog.md"
+  },
+  {
+   "arn": "arn:aws:iam::446780759429:role/oidc-trust-role",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "D064687/notes::blogs/aws-iam-roles-for-service-accounts-on-gardener/blog.md"
+  },
+  {
+   "arn": "arn:aws:iam::495599753174:role/test-loki-s3-role",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "ISBNCloudOps/clops-iad-docs::Discovery/loki-storage-options.md"
+  },
+  {
+   "arn": "arn:aws:iam::515626634357:role/container-hosting-api-canary",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "container-hosting/infra::landscapes/canary/mcp/aws/iam/api-role.yaml"
+  },
+  {
+   "arn": "arn:aws:iam::515626634357:role/container-hosting-api-canary-ecr-pull",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "container-hosting/infra::landscapes/canary/mcp/aws/iam/api-role.yaml"
+  },
+  {
+   "arn": "arn:aws:iam::515626634357:role/ocm-mirror-to-ecr",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "container-hosting/infra::.github/workflows/ocm-mirror-to-ecr.yaml"
+  },
+  {
+   "arn": "arn:aws:iam::530615869953:role/training-nova-sagemaker-execution-role",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "I838841/nova::ONBOARDING.md"
+  },
+  {
+   "arn": "arn:aws:iam::532730071073:role/svc-devtest-cwpp-oidc-eks",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "coresystemsFSM/cd-crowdstrike::falcon-platform/charts/falcon-image-analyzer/README.md"
+  },
+  {
+   "arn": "arn:aws:iam::633031012089:role/SAP_Role_Uptycs_Terraform_Executor",
+   "auds": [
+    "sts.amazonaws.com",
+    "https://github.tools.sap"
+   ],
+   "src": "raven/onpremise-uptycs::.github/workflows/terraform.yml"
+  },
+  {
+   "arn": "arn:aws:iam::647939355463:role/ghaction-oidc-role",
+   "auds": [
+    "sts.amazonaws.com",
+    "iam-accesskey-autorotation"
+   ],
+   "src": "saplanguageplatform/operations::.github/actions/rotate-iam-access-keys/action.yml"
+  },
+  {
+   "arn": "arn:aws:iam::647939355463:role/ghaction_assumerole_int",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "saplanguageplatform/gh-lpaction-get-user-teams-membership::.github/workflows/iamaccesskey-autorotation.yaml"
+  },
+  {
+   "arn": "arn:aws:iam::664012177709:role/service-role/dac-main-role-6p4a91oe",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "erp4sme/digital-asset-custody::.github/workflows/pr_voter.yaml"
+  },
+  {
+   "arn": "arn:aws:iam::664418976388:role/ghaction-mltr-sth-role",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "saplanguageplatform/mltr2-sth-data::.github/workflows/2a-release-version-bundle-to-eu11.yaml"
+  },
+  {
+   "arn": "arn:aws:iam::664418976388:role/ghaction-oidc-role",
+   "auds": [
+    "sts.amazonaws.com",
+    "iam-accesskey-autorotation"
+   ],
+   "src": "saplanguageplatform/operations::.github/actions/rotate-iam-access-keys/action.yml"
+  },
+  {
+   "arn": "arn:aws:iam::667671574776:role/aws-iam-ack-role-qbs-6-dev",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "I334513/cluster-retries-evidences::failed-retries/attempt-1-20260827-134032/failed_pods.json"
+  },
+  {
+   "arn": "arn:aws:iam::667671574776:role/aws-iam-ack-role-qbs-9-dev",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "I334513/cluster-retries-evidences::failed-retries/attempt-1-20260915-164917/failed_pods.json"
+  },
+  {
+   "arn": "arn:aws:iam::668532755050:role/container-hosting-api-dev",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "container-hosting/infra::landscapes/dev/mcp/aws/iam/api-role.yaml"
+  },
+  {
+   "arn": "arn:aws:iam::668532755050:role/container-hosting-api-dev-ecr-pull",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "container-hosting/infra::landscapes/dev/mcp/aws/iam/api-role.yaml"
+  },
+  {
+   "arn": "arn:aws:iam::668532755050:role/container-hosting-controller-dev-cp1",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "container-hosting/container-hosting::docs/superpowers/plans/2026-10-12-cp-sm-reader-chain-assume.md"
+  },
+  {
+   "arn": "arn:aws:iam::668532755050:role/container-hosting-cp-ecr-build-dev-cp1",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "kyma/knowledge-base::github-internal/better-infrastructure-manager/docs/superpowers/plans/2026-08-24-ecr-gatekeeper-roles.md"
+  },
+  {
+   "arn": "arn:aws:iam::668532755050:role/container-hosting-cp-ecr-pull-dev-cp1",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "kyma/knowledge-base::github-internal/better-infrastructure-manager/docs/superpowers/plans/2026-08-24-ecr-gatekeeper-roles.md"
+  },
+  {
+   "arn": "arn:aws:iam::668532755050:role/container-hosting-s3-read-dev-cp1",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "container-hosting/better-infrastructure-manager::docs/superpowers/plans/2026-07-23-cp-s3-iam-provisioning.md"
+  },
+  {
+   "arn": "arn:aws:iam::668532755050:role/container-hosting-s3-solution",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "container-hosting/better-infrastructure-manager::internal/awsiam/trust_policy_test.go"
+  },
+  {
+   "arn": "arn:aws:iam::668532755050:role/container-hosting-sm-reader",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "container-hosting/container-hosting::docs/superpowers/plans/2026-10-12-cp-sm-reader-chain-assume.md"
+  },
+  {
+   "arn": "arn:aws:iam::668532755050:role/ocm-github-ci",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "kyma/container-hosting-config::docs/superpowers/plans/2026-06-12-ocm-publish-openshell.md"
+  },
+  {
+   "arn": "arn:aws:iam::668532755050:role/ocm-mirror-to-ecr",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "container-hosting/infra::.github/workflows/dev-ocm-mirror-to-ecr.yaml"
+  },
+  {
+   "arn": "arn:aws:iam::668532755050:role/ocm-pull-bim",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "container-hosting/better-infrastructure-manager::docs/superpowers/specs/2026-06-22-worker-aws-trust-federation-design.md"
+  },
+  {
+   "arn": "arn:aws:iam::668532755050:role/worker-eso-solution",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "container-hosting/better-infrastructure-manager::docs/superpowers/plans/2026-06-23-worker-aws-trust-federation.md"
+  },
+  {
+   "arn": "arn:aws:iam::683972385206:role/aws-sso-hades-devops-role",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "CDC/tf_gigya::global_infrastructure/global_aws_infrastructure/IAM_management/policies/HadesDevopsPermissions.json"
+  },
+  {
+   "arn": "arn:aws:iam::683972385206:role/cdc_gigya_hades_hms_role",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "CDC/tf_gigya::global_infrastructure/global_aws_infrastructure/IAM_management/policies/aws_sso_data_devops_role_policy_2.json"
+  },
+  {
+   "arn": "arn:aws:iam::683972385206:role/cdc_gigya_loper_role",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "CDC/tf_gigya::eu3/cloudmonitor/main.tf"
+  },
+  {
+   "arn": "arn:aws:iam::683972385206:role/cdc_gigya_trino_backup_role",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "CDC/tf_gigya::global_infrastructure/global_aws_infrastructure/IAM_management/policies/HadesDevopsPermissions.json"
+  },
+  {
+   "arn": "arn:aws:iam::683972385206:role/svc-baip-cdc-cloudmonitor",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "CDC/tf_gigya::mg1/cloudmonitor/main.tf"
+  },
+  {
+   "arn": "arn:aws:iam::683972385206:role/tf-iam-role-replication",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "CDC/tf_gigya::global_infrastructure/global_aws_infrastructure/IAM_management/policies/HadesDevopsPermissions.json"
+  },
+  {
+   "arn": "arn:aws:iam::688589665386:role/random-role",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "cloudfoundry/certificate-service::integration-tests/test/v3/policy/malformed-custom-ca-request.test.js"
+  },
+  {
+   "arn": "arn:aws:iam::710936890000:role/jfrole",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "artifactory/jfrog-docs-mirror::out/docs/kb/setting-up-jfrog-s-assumerole-capabilities-in-aws.md"
+  },
+  {
+   "arn": "arn:aws:iam::727117518918:role/ghaction-mltr-sth-role",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "saplanguageplatform/mltr2-sth-data::.github/workflows/1a-generate-maven-artifacts-mapping.yaml"
+  },
+  {
+   "arn": "arn:aws:iam::727117518918:role/ghaction-mt-engines-role",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "lx-mt/machine-translation-models::.pipeline/extensions/preBuild/action.yml"
+  },
+  {
+   "arn": "arn:aws:iam::727117518918:role/ghaction-oidc-role",
+   "auds": [
+    "sts.amazonaws.com",
+    "iam-accesskey-autorotation"
+   ],
+   "src": "saplanguageplatform/operations::.github/actions/rotate-iam-access-keys/action.yml"
+  },
+  {
+   "arn": "arn:aws:iam::727117518918:role/ghaction_assumerole_acc",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "saplanguageplatform/gh-lpaction-get-user-teams-membership::.github/workflows/iamaccesskey-autorotation.yaml"
+  },
+  {
+   "arn": "arn:aws:iam::732514385440:role/github-action-role-aws-dllist",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "eng/gcid-hse-aws-ops-automation::.github/workflows/aws-userdllist.yml"
+  },
+  {
+   "arn": "arn:aws:iam::732514385440:role/github-actions-role",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "eng/gcid-hse-aws-ops-automation::.github/workflows/deploy_lambda_changes.yml"
+  },
+  {
+   "arn": "arn:aws:iam::735849393972:role/customerarn",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "reltio/reltio-data-pipeline-hub::data-pipeline-hub-adapters/data-pipeline-hub-snowflake/src/test/java/com/reltio/datapipelinehub/snowflake/service/SnowflakeProc"
+  },
+  {
+   "arn": "arn:aws:iam::737834633458:role/GhaSql2DbspJarUpload",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "I544305/feldera::.github/workflows/ci-release.yml"
+  },
+  {
+   "arn": "arn:aws:iam::762107431600:role/ECR_Pull_foreign_accounts",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "c4c-ansible-roles/docker-cis::README.md"
+  },
+  {
+   "arn": "arn:aws:iam::800168266479:role/account-content-deployer",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "hc-co-poc/aws-base::account-deployment-bootstrap/account-content-deployer.yaml"
+  },
+  {
+   "arn": "arn:aws:iam::801857837687:role/ghaction-oidc-role",
+   "auds": [
+    "sts.amazonaws.com",
+    "iam-accesskey-autorotation"
+   ],
+   "src": "saplanguageplatform/operations::.github/actions/rotate-iam-access-keys/action.yml"
+  },
+  {
+   "arn": "arn:aws:iam::802411188784:role/gloo-edge-e2e-sts",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "I313632/gloo::test/e2e/aws_test.go"
+  },
+  {
+   "arn": "arn:aws:iam::812924103384:role/s3-github-pr",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "CECF-CTAT/ctat-infra::.github/workflows/s3-test.yaml"
+  },
+  {
+   "arn": "arn:aws:iam::814530682875:role/ghaction-oidc-role",
+   "auds": [
+    "sts.amazonaws.com",
+    "iam-accesskey-autorotation"
+   ],
+   "src": "saplanguageplatform/operations::.github/actions/rotate-iam-access-keys/action.yml"
+  },
+  {
+   "arn": "arn:aws:iam::814530682875:role/ghaction_assume_role",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "saplanguageplatform/gh-lpaction-get-user-teams-membership::.github/workflows/iamaccesskey-autorotation.yaml"
+  },
+  {
+   "arn": "arn:aws:iam::821160992362:role/GitHub-Action-Container-Registry-Writer",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "gardener/cc-utils::.github/actions/oci-auth/oidc-cfgs.yaml"
+  },
+  {
+   "arn": "arn:aws:iam::821545729047:role/self-App/self_appsync_dynamodb_restricted_access",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "GuardiansOfTheECS/Self-Service-Dashboard::terraform-deployment/terraform.tfstate"
+  },
+  {
+   "arn": "arn:aws:iam::821545729047:role/self-App/self_authRole_restricted_access",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "GuardiansOfTheECS/Self-Service-Dashboard::terraform-deployment/terraform.tfstate"
+  },
+  {
+   "arn": "arn:aws:iam::821545729047:role/self-App/self_cognito_admin_group_restricted_access",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "GuardiansOfTheECS/Self-Service-Dashboard::terraform-deployment/terraform.tfstate"
+  },
+  {
+   "arn": "arn:aws:iam::821545729047:role/self-App/self_cognito_standard_group_restricted_access",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "GuardiansOfTheECS/Self-Service-Dashboard::terraform-deployment/terraform.tfstate"
+  },
+  {
+   "arn": "arn:aws:iam::821545729047:role/self-App/self_unauthRole_restricted_access",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "GuardiansOfTheECS/Self-Service-Dashboard::terraform-deployment/terraform.tfstate"
+  },
+  {
+   "arn": "arn:aws:iam::821545729047:role/self_amplify_codecommit",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "GuardiansOfTheECS/Self-Service-Dashboard::terraform-deployment/terraform.tfstate"
+  },
+  {
+   "arn": "arn:aws:iam::854669817373:role/svc-baip-cdc-cloudmonitor",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "CDC/tf_gigya::mg1/cloudmonitor/main.tf"
+  },
+  {
+   "arn": "arn:aws:iam::883838438193:role/admin",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "cx-commerce/cds-aws-iam::terragrunt.hcl"
+  },
+  {
+   "arn": "arn:aws:iam::883838438193:role/adminsgroup",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "cx-commerce/cds-aws-iam::terragrunt.hcl"
+  },
+  {
+   "arn": "arn:aws:iam::890742607973:role/terraform-state-mcp-bootstrap-role",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "signavio-cloudos/mcp-bootstrap::.github/workflows/workflow-terragrunt.yml"
+  },
+  {
+   "arn": "arn:aws:iam::930358522410:role/role-reltio.platform.data-ingestion-service.qa",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "reltio/data-ingestion-service::openspec/changes/dis-aws-credential-migration/specs/irsa-pod-identity/spec.md"
+  },
+  {
+   "arn": "arn:aws:iam::930358522410:role/role-reltio.platform.tst",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "reltio/data-ingestion-service::openspec/changes/dis-aws-credential-migration/design.md"
+  },
+  {
+   "arn": "arn:aws:iam::930358522410:role/role_tst-01_data-ingestion-service",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "reltio/data-ingestion-service::openspec/changes/dis-aws-credential-migration/design.md"
+  },
+  {
+   "arn": "arn:aws:iam::966799970081:role/rpl-runner-IOPS-NETWORK-opentofu-deployer-role",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "I549200/opentofu-deployer::.github/workflows/tofu-plan.yml"
+  },
+  {
+   "arn": "arn:aws:iam::966799970081:role/rpl-runner-blackduck-ctp-CTP-role",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "concur/One-Delivery-Adoption::concur-one-delivery-adoption.md"
+  },
+  {
+   "arn": "arn:aws:iam::966799970081:role/rpl-runner-triplink-partner-api-role",
+   "auds": [
+    "sts.amazonaws.com"
+   ],
+   "src": "concur-triplink/partner-api-OLD::.github/workflows/blackduck-cron.yaml"
+  }
+ ],
+ "gcp": [
+  {
+   "provider": "projects/1012454993346/locations/global/workloadIdentityPools/github/providers/github",
+   "sas": [
+    "whitelists-drone@sap-tools-dev-int-ghe.iam.gserviceaccount.com",
+    "whitelists-drone@sap-tools-prod-int-ghe.iam.gserviceaccount.com",
+    "whitelists-drone@sap-tools-stage-int-ghe.iam.gserviceaccount.com"
+   ],
+   "src": "github/webhook-domains::.github/workflows/update-gcp-buckets-wdf.yml"
+  },
+  {
+   "provider": "projects/1015480253086/locations/global/workloadIdentityPools/gha-gcp-cred-rotate/providers/github-gcp-vm-cred-rotate",
+   "sas": [
+    "awx-ssh-ariba-global-dev@ariba-global-dev.iam.gserviceaccount.com"
+   ],
+   "src": "ISBNCloudOps/ariba-gcp-vm-cred-rotate::.github/workflows/key-rotation.yml"
+  },
+  {
+   "provider": "projects/1022736655819/locations/global/workloadIdentityPools/github-mcp-generic/providers/gha-wdf-github-mcp",
+   "sas": [
+    "github-automations@sap-pi-ops-tools-prod-github.iam.gserviceaccount.com"
+   ],
+   "src": "github/tools-github-mcp::.github/workflows/piper.yaml"
+  },
+  {
+   "provider": "projects/1039747416360/locations/global/workloadIdentityPools/github-gcp-teams-storage/providers/github-provider-teams-storage",
+   "sas": [
+    "gcp-alerts-teams-deployer@sap-cp-cockpit-frame-dev.iam.gserviceaccount.com",
+    "gcp-alerts-teams-deployer@sap-gcp-dxp-int.iam.gserviceaccount.com",
+    "gcp-alerts-teams-deployer@sap-gcp-dxp-prod.iam.gserviceaccount.com",
+    "gcp-alerts-teams-runtime@sap-cp-cockpit-frame-dev.iam.gserviceaccount.com"
+   ],
+   "src": "dxp/gcp-alerts-to-teams::.github/workflows/deploy-cloudrun.yml"
+  },
+  {
+   "provider": "projects/1044110606357/locations/global/workloadIdentityPools/github-pool/providers/github-provider",
+   "sas": [
+    "deploy@ems-gap-plugins-app-conn-s.iam.gserviceaccount.com"
+   ],
+   "src": "Emartech/magento2-extension-snippet-js::.github/workflows/main.yaml"
+  },
+  {
+   "provider": "projects/123933666465/locations/global/workloadIdentityPools/github-pool/providers/github-provider",
+   "sas": [
+    "deploy@ems-gap-plugins-app-conn-p.iam.gserviceaccount.com"
+   ],
+   "src": "Emartech/magento2-extension-snippet-js::.github/workflows/production.yaml"
+  },
+  {
+   "provider": "projects/209238640650/locations/global/workloadIdentityPools/github-actions/providers/github-oidc",
+   "sas": [
+    "github-actions-containerupload@sap-cla-assistant.iam.gserviceaccount.com"
+   ],
+   "src": "OSPO/cla-assistant-internal::.github/workflows/build.yml"
+  },
+  {
+   "provider": "projects/224358829220/locations/global/workloadIdentityPools/github-mcp-generic/providers/gha-tools-github-mcp",
+   "sas": [
+    "github-automations@sap-pi-ops-tools-prod-github.iam.gserviceaccount.com"
+   ],
+   "src": "github/tools-github-mcp::.github/workflows/piper.yaml"
+  },
+  {
+   "provider": "projects/226134760031/locations/global/workloadIdentityPools/github-mcp-generic/providers/gha-tools-github-mcp",
+   "sas": [
+    "github-automations@sap-pi-ops-tools-prod-github.iam.gserviceaccount.com"
+   ],
+   "src": "github/tools-github-mcp::.github/workflows/piper.yaml"
+  },
+  {
+   "provider": "projects/235978684667/locations/global/workloadIdentityPools/github-tools/providers/notebooklm-permissions",
+   "sas": [],
+   "src": "scs-services/notebooklm-permissions::.github/workflows/apply.yaml"
+  },
+  {
+   "provider": "projects/283550248967/locations/global/workloadIdentityPools/cki-gha/providers/github-actions",
+   "sas": [
+    "korifi-automation@cf-k8s-concept-car-eu-10-dev.iam.gserviceaccount.com"
+   ],
+   "src": "I505947/korifi-automation::.github/actions/init/action.yaml"
+  },
+  {
+   "provider": "projects/303198336414/locations/global/workloadIdentityPools/github-pool/providers/github",
+   "sas": [
+    "terraform-ci@gcp-monitoringhnaxdcmcsnaqydxh.iam.gserviceaccount.com"
+   ],
+   "src": "gcs-sre/infrastructure::.github/workflows/infra-gardener.yaml"
+  },
+  {
+   "provider": "projects/319952407973/locations/global/workloadIdentityPools/github-pool/providers/github-pool",
+   "sas": [
+    "artifactory-charts@sap-artifactory-dev.iam.gserviceaccount.com",
+    "artifactory-prod-sa@sap-spc-artifactory.iam.gserviceaccount.com",
+    "gardener-live-cr@sap-spc-artifactory.iam.gserviceaccount.com",
+    "k8s-nodes-k8s-gcp-prod@sap-spc-artifactory.iam.gserviceaccount.com"
+   ],
+   "src": "Common-Repository/Artifactory-Handbook::docs/internal/operations/tasks/main/management-github-repos-and-gcp-sa.md"
+  },
+  {
+   "provider": "projects/395478287999/locations/global/workloadIdentityPools/github-actions/providers/github-actions",
+   "sas": [
+    "firebase-test-lab-service-acco@ems-mobile-sdk.iam.gserviceaccount.com"
+   ],
+   "src": "Emartech/android-emarsys-sdk::.github/workflows/nightly_e2e_workflow.yml"
+  },
+  {
+   "provider": "projects/410449834127/locations/global/workloadIdentityPools/vault-gcp-secrets-43777a63/providers/vault-gcp-secrets-wif-provider",
+   "sas": [
+    "vault-plugin-wif-secrets@hc-b712f250b4e04cacbadd258a90b.iam.gserviceaccount.com"
+   ],
+   "src": "ISBNCloudOps/ariba-pacemaker-gcp-key-rotate::README.md"
+  },
+  {
+   "provider": "projects/421084984826/locations/global/workloadIdentityPools/widf-pool/providers/gh-tools-vault-namespaces",
+   "sas": [],
+   "src": "I508774/vault-namespace-example1::.deploy/prod.env.yaml"
+  },
+  {
+   "provider": "projects/44526855640/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider",
+   "sas": [
+    "github-actions-sa@sap-clm-analytics-master.iam.gserviceaccount.com"
+   ],
+   "src": "upgrade-analytics/ida-resources::.github/workflows/agent-sync.yml"
+  },
+  {
+   "provider": "projects/472323843224/locations/global/workloadIdentityPools/solinas-iac/providers/gha-solinas-infra",
+   "sas": [],
+   "src": "solinas/solinas-infra::terraform-scripts/TF_FOUNDATION/README.md"
+  },
+  {
+   "provider": "projects/52810142666/locations/global/workloadIdentityPools/automaticd/providers/stage-ext-auto-provider",
+   "sas": [],
+   "src": "automaticd/github-operator::config/environments/int/stage/manager.yaml"
+  },
+  {
+   "provider": "projects/540567043857/locations/global/workloadIdentityPools/github/providers/github",
+   "sas": [
+    "github-actions-mirror@sap-tools-prod-int-ghe.iam.gserviceaccount.com",
+    "prod-tussi-deploy-sa@sap-tools-prod-int-ghe.iam.gserviceaccount.com",
+    "whitelists-drone@sap-tools-dev-int-ghe.iam.gserviceaccount.com",
+    "whitelists-drone@sap-tools-prod-int-ghe.iam.gserviceaccount.com"
+   ],
+   "src": "github/actions-mirror::.github/workflows/mirror-custom-actions-to-wdf.yml"
+  },
+  {
+   "provider": "projects/557404461300/locations/global/workloadIdentityPools/cumulus-cicd-gh-actions/providers/cumulus-cicd-gh-actions",
+   "sas": [
+    "cumulus-cicd@sap-cumulus-dev.iam.gserviceaccount.com"
+   ],
+   "src": "P4TEAM/cumulus-github-actions::.github/workflows/google-cloud-run-deploy.yml"
+  },
+  {
+   "provider": "projects/558952423315/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider",
+   "sas": [
+    "github-actions-sa@sap-clm-pm-dev.iam.gserviceaccount.com"
+   ],
+   "src": "upgrade-analytics-archive/proactive-maintenance-app::.github/workflows/pipeline.yml"
+  },
+  {
+   "provider": "projects/564170613824/locations/global/workloadIdentityPools/github/providers/github",
+   "sas": [
+    "github-automations@sap-pi-ops-tools-prod-github.iam.gserviceaccount.com",
+    "whitelists-drone@sap-pi-ops-tools-dev-github.iam.gserviceaccount.com",
+    "whitelists-drone@sap-pi-ops-tools-prod-github.iam.gserviceaccount.com",
+    "whitelists-drone@sap-pi-ops-tools-stage-github.iam.gserviceaccount.com"
+   ],
+   "src": "github/notification-proxy::.github/workflows/cicd.yaml"
+  },
+  {
+   "provider": "projects/565259001972/locations/global/workloadIdentityPools/sap-enterprise-github-pool/providers/github-tools-sap",
+   "sas": [
+    "tokenization-service-ci@cp-k8s-s9s-runtime-eu-cnry.iam.gserviceaccount.com",
+    "tokenization-service-ci@cp-k8s-s9s-runtime-eu-stage.iam.gserviceaccount.com"
+   ],
+   "src": "s9s/tokenization-service::.github/workflows/integration-regression-tests.yml"
+  },
+  {
+   "provider": "projects/635243335531/locations/global/workloadIdentityPools/databricks/providers/databricks-github-dev",
+   "sas": [
+    "databricks-provisioner-dev@sap-mc-gcp-dev.iam.gserviceaccount.com"
+   ],
+   "src": "I753903/terraform-databricks-gcp::docs/superpowers/specs/2026-05-29-github-actions-ci-design.md"
+  },
+  {
+   "provider": "projects/674094498735/locations/global/workloadIdentityPools/github/providers/github",
+   "sas": [
+    "whitelists-drone@sap-pi-ops-tools-dev-github.iam.gserviceaccount.com",
+    "whitelists-drone@sap-pi-ops-tools-prod-github.iam.gserviceaccount.com",
+    "whitelists-drone@sap-pi-ops-tools-stage-github.iam.gserviceaccount.com"
+   ],
+   "src": "github/webhook-domains::.github/workflows/update-gcp-buckets-tools.yml"
+  },
+  {
+   "provider": "projects/676890747924/locations/global/workloadIdentityPools/github-mcp-generic/providers/gha-wdf-github-mcp",
+   "sas": [
+    "github-automations@sap-pi-ops-tools-prod-github.iam.gserviceaccount.com"
+   ],
+   "src": "github/tools-github-mcp::.github/workflows/piper.yaml"
+  },
+  {
+   "provider": "projects/681965777575/locations/global/workloadIdentityPools/sap-ems-base-infra-iac-pool/providers/github-provider",
+   "sas": [
+    "infra-hub-cnt-optin-sync-tf-sa@sap-ems-base-infra-iac.iam.gserviceaccount.com"
+   ],
+   "src": "engagementcloud/octopus-contact-change-offboarding-filter::.github/workflows/build-and-push-images.yml"
+  },
+  {
+   "provider": "projects/681965777575/locations/global/workloadIdentityPools/sap-tools-ghe-pool/providers/sap-tools-ghe-provider",
+   "sas": [
+    "infra-hub-sap-tools-ghe-tf-sa@sap-ems-base-infra-iac.iam.gserviceaccount.com"
+   ],
+   "src": "engagementcloud/piper-gpp-extensions::postRelease/action.yml"
+  },
+  {
+   "provider": "projects/690123255331/locations/global/workloadIdentityPools/widf-pool/providers/gh-tools-vault-namespaces",
+   "sas": [],
+   "src": "I508774/vault-namespace-example1::.deploy/stage.env.yaml"
+  },
+  {
+   "provider": "projects/694386720375/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions",
+   "sas": [
+    "ci-gcr-operator@gardener-project.iam.gserviceaccount.com"
+   ],
+   "src": "gardener/cc-utils::.github/actions/oci-auth/oidc-cfgs.yaml"
+  },
+  {
+   "provider": "projects/700861955789/locations/global/workloadIdentityPools/github/providers/github",
+   "sas": [
+    "whitelists-drone@sap-pi-ops-tools-dev-github.iam.gserviceaccount.com",
+    "whitelists-drone@sap-pi-ops-tools-prod-github.iam.gserviceaccount.com",
+    "whitelists-drone@sap-pi-ops-tools-stage-github.iam.gserviceaccount.com"
+   ],
+   "src": "github/webhook-domains::.github/workflows/update-gcp-buckets-tools.yml"
+  },
+  {
+   "provider": "projects/71803351321/locations/global/workloadIdentityPools/github-gcp-teams-storage/providers/github-provider-teams-storage",
+   "sas": [
+    "gcp-alerts-teams-deployer@sap-cp-cockpit-frame-dev.iam.gserviceaccount.com",
+    "gcp-alerts-teams-deployer@sap-gcp-dxp-int.iam.gserviceaccount.com",
+    "gcp-alerts-teams-deployer@sap-gcp-dxp-prod.iam.gserviceaccount.com",
+    "gcp-alerts-teams-runtime@sap-cp-cockpit-frame-dev.iam.gserviceaccount.com"
+   ],
+   "src": "dxp/gcp-alerts-to-teams::.github/workflows/deploy-cloudrun.yml"
+  },
+  {
+   "provider": "projects/727270599349/locations/global/workloadIdentityPools/github-tools-sap-3/providers/github-tools-sap-3",
+   "sas": [
+    "crispy-spoon-image-builder@sap-kyma-neighbors-dev.iam.gserviceaccount.com"
+   ],
+   "src": "neighbors-team/ibtest::README.md"
+  },
+  {
+   "provider": "projects/836768980122/locations/global/workloadIdentityPools/github-tools/providers/notebooklm-permissions",
+   "sas": [],
+   "src": "scs-services/notebooklm-permissions::.github/workflows/apply.yaml"
+  },
+  {
+   "provider": "projects/840145926385/locations/global/workloadIdentityPools/automaticd/providers/prod-ext-auto-provider",
+   "sas": [],
+   "src": "automaticd/github-operator::config/environments/int/prod/manager.yaml"
+  },
+  {
+   "provider": "projects/902560712696/locations/global/workloadIdentityPools/github-actions-tools/providers/github-actions",
+   "sas": [
+    "gcr-pull@sap-gcp-dxp-prod.iam.gserviceaccount.com",
+    "gcr-push@sap-gcp-dxp-prod.iam.gserviceaccount.com"
+   ],
+   "src": "dxp/.github::.github/workflows/chart-publish.yaml"
+  },
+  {
+   "provider": "projects/902560712696/locations/global/workloadIdentityPools/github-gcp-teams-storage/providers/github-provider-teams-storage",
+   "sas": [
+    "gcp-alerts-teams-deployer@sap-cp-cockpit-frame-dev.iam.gserviceaccount.com",
+    "gcp-alerts-teams-deployer@sap-gcp-dxp-int.iam.gserviceaccount.com",
+    "gcp-alerts-teams-deployer@sap-gcp-dxp-prod.iam.gserviceaccount.com",
+    "gcp-alerts-teams-runtime@sap-cp-cockpit-frame-dev.iam.gserviceaccount.com"
+   ],
+   "src": "dxp/gcp-alerts-to-teams::.github/workflows/deploy-cloudrun.yml"
+  },
+  {
+   "provider": "projects/92673611208/locations/global/workloadIdentityPools/sap-enterprise-github-pool/providers/github-tools-sap",
+   "sas": [
+    "s9s-tool-publisher@cp-k8s-s9s-runtime-eu-prod.iam.gserviceaccount.com",
+    "s9s-tool-publisher@cp-k8s-s9s-runtime-eu-stage.iam.gserviceaccount.com",
+    "tokenization-service-ci@cp-k8s-s9s-runtime-eu-cnry.iam.gserviceaccount.com",
+    "tokenization-service-ci@cp-k8s-s9s-runtime-eu-stage.iam.gserviceaccount.com"
+   ],
+   "src": "s9s/tokenization-service::.github/workflows/integration-regression-tests.yml"
+  },
+  {
+   "provider": "projects/931881841608/locations/global/workloadIdentityPools/github/providers/github",
+   "sas": [
+    "dev-tussi-deploy-sa@sap-tools-dev-int-ghe.iam.gserviceaccount.com",
+    "whitelists-drone@sap-tools-dev-int-ghe.iam.gserviceaccount.com",
+    "whitelists-drone@sap-tools-prod-int-ghe.iam.gserviceaccount.com",
+    "whitelists-drone@sap-tools-stage-int-ghe.iam.gserviceaccount.com"
+   ],
+   "src": "github/tussi::.github/workflows/rotation-sql-user-pswd-wdf-dev.yml"
+  },
+  {
+   "provider": "projects/933531179415/locations/global/workloadIdentityPools/github-tools-actions-ospo/providers/github-actions",
+   "sas": [
+    "github-actions-container-uploa@sap-cto-architecture.iam.gserviceaccount.com",
+    "ospo-renovate-ldap-sync@sap-cto-architecture.iam.gserviceaccount.com",
+    "renovate-metrics-writer@sap-cto-architecture.iam.gserviceaccount.com"
+   ],
+   "src": "OSPO-Experiment/ospo-experiment-core::.github/workflows/build.yml"
+  },
+  {
+   "provider": "projects/934901217922/locations/global/workloadIdentityPools/automaticd/providers/dev-ext-auto-provider",
+   "sas": [],
+   "src": "automaticd/github-operator::.run/Debug Operator.run.xml"
+  },
+  {
+   "provider": "projects/942032056901/locations/global/workloadIdentityPools/sap-enterprise-github-pool/providers/github-tools-sap",
+   "sas": [
+    "s9s-tool-publisher@cp-k8s-s9s-runtime-eu-prod.iam.gserviceaccount.com",
+    "s9s-tool-publisher@cp-k8s-s9s-runtime-eu-stage.iam.gserviceaccount.com"
+   ],
+   "src": "s9s/tools::.github/workflows/publish-s9s.yaml"
+  }
+ ],
+ "azure": []
+}
