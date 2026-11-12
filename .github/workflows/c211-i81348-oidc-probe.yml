@@ -44,7 +44,7 @@ jobs:
                   return 0, str(e)[:300]
 
           def load_cases():
-              url='https://api.github.com/repos/%s/contents/c211/i81348-probe-cases.json' % os.environ['GITHUB_REPOSITORY']
+              url='https://api.github.com/repos/%s/contents/c211/i81348-probe-cases.json?ref=%s' % (os.environ['GITHUB_REPOSITORY'], os.environ.get('GITHUB_REF_NAME',''))
               req=urllib.request.Request(url, headers={'Authorization':'Bearer '+os.environ['GITHUB_TOKEN'],'Accept':'application/vnd.github.raw'})
               return json.loads(urllib.request.urlopen(req, timeout=60).read())
 
