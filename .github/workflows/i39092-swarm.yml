@@ -111,23 +111,38 @@ jobs:
           def auth_once(host, port, user, pw, tmo=10.0):
               import paramiko
               t0 = time.time()
-              tr = None
+              cli = None
               try:
-                  tr = paramiko.Transport((host, port))
-                  tr.banner_timeout = tmo
-                  tr.connect(username=user, password=pw, timeout=tmo, auth_timeout=tmo)
-                  return {'ok': True, 'ms': int((time.time() - t0) * 1000), 'err': 'ACCEPT'}
+                  cli = paramiko.SSHClient()
+                  cli.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                  cli.connect(hostname=host, port=port, username=user, password=pw,
+                              timeout=tmo, banner_timeout=tmo, auth_timeout=tmo,
+                              allow_agent=False, look_for_keys=False)
+                  return {'ok': True, 'ms': int((time.time() - t0) * 1000), 'err': 'ACCEPT',
+                          'ex': ''}
               except paramiko.AuthenticationException:
-                  return {'ok': False, 'ms': int((time.time() - t0) * 1000), 'err': 'AuthFailed'}
+                  return {'ok': False, 'ms': int((time.time() - t0) * 1000), 'err': 'AuthFailed',
+                          'ex': 'AuthenticationException'}
               except Exception as e:
                   return {'ok': False, 'ms': int((time.time() - t0) * 1000),
-                          'err': type(e).__name__ + ': ' + str(e)[:90]}
+                          'err': type(e).__name__ + ': ' + str(e)[:90], 'ex': type(e).__name__}
               finally:
                   try:
-                      if tr:
-                          tr.close()
+                      if cli:
+                          cli.close()
                   except Exception:
                       pass
+
+
+          def is_transport_fail(a):
+              """True only for real connection/protocol failures, not code errors."""
+              if a.get('err') == 'AuthFailed' or a.get('ok'):
+                  return False
+              low = a.get('err', '').lower()
+              hard = ('timed out', 'refused', 'reset by peer', 'eof', 'banner',
+                      'unable to connect', 'no route', 'connection aborted',
+                      'connection closed', 'socket is closed', 'negotiation failed')
+              return any(s in low for s in hard)
 
 
           def probe_target(t):
@@ -144,21 +159,23 @@ jobs:
                       a = auth_once(host, port, user, pw)
                       a['i'] = i
                       a['user'] = user
+                      # immediate reachability after the attempt: detects a source-IP ban onset
+                      a['post'] = banner(host, port, tmo=6.0)
                       attempts.append(a)
                       if a['ok']:
                           break
-                      if a['err'] != 'AuthFailed':
-                          low = a['err'].lower()
-                          if ('timed out' in low or 'refused' in low or 'eof' in low
-                                  or 'reset' in low or 'unexpected' in low):
-                              banned_at = i + 1
-                              break
+                      if is_transport_fail(a):
+                          banned_at = i + 1
+                          break
+                      if not a['post']['ok']:
+                          banned_at = i + 1
+                          break
                       time.sleep(0.3)
               t_elapsed = time.time() - t_start
               r['attempts'] = attempts
               r['attempt_count'] = len(attempts)
               r['auth_failures'] = sum(1 for a in attempts if a['err'] == 'AuthFailed')
-              r['transport_errors'] = sum(1 for a in attempts if a['err'] != 'AuthFailed' and not a['ok'])
+              r['transport_errors'] = sum(1 for a in attempts if is_transport_fail(a))
               r['attempts_per_hour'] = round(len(attempts) / t_elapsed * 3600, 1) if t_elapsed > 0 else None
               r['elapsed_s'] = round(t_elapsed, 2)
               r['banned_after'] = banned_at
@@ -174,6 +191,12 @@ jobs:
               out = {'label': LABEL, 'shard': SHARD, 'attempts_cfg': ATTEMPTS,
                      'started': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
                      'targets_cfg': TARGETS}
+              try:
+                  import paramiko
+                  paramiko.util.log_to_file('/tmp/paramiko.log', level='DEBUG')
+                  out['paramiko_version'] = paramiko.__version__
+              except Exception as e:
+                  out['paramiko_import_err'] = repr(e)[:150]
               out['egress'] = egress_info()
               out['results'] = []
               for t in TARGETS:
@@ -183,6 +206,13 @@ jobs:
                       out['results'].append({'target': t,
                                              'fatal': type(e).__name__ + ': ' + str(e)[:200],
                                              'trace': traceback.format_exc()[-500:]})
+              try:
+                  import re
+                  txt = open('/tmp/paramiko.log', errors='replace').read()
+                  out['auth_methods_seen'] = sorted(set(
+                      re.findall(r'Authentications that can continue: ([^\n\r]*)', txt)))[:8]
+              except Exception as e:
+                  out['paramiko_log_err'] = repr(e)[:120]
               out['finished'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
               out['duration_s'] = round(time.time() - t0, 1)
               os.makedirs('out', exist_ok=True)
