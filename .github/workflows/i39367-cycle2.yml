@@ -1,5 +1,5 @@
 name: i39367-cycle2
-# Disposable GitHub-hosted SSH-origin worker with PER-TARGET THREADS and per-target ban timers.
+# Disposable GitHub-hosted SSH-origin worker: per-target threads; mode oneshot = 3 attempts/target then exit.
 on:
   workflow_dispatch:
     inputs:
@@ -302,6 +302,8 @@ jobs:
                       with LOCK:
                           st['no'] += 1
                       time.sleep(0.05)
+                  if MODE == 'oneshot':
+                      return
                   if ban_t is None and not HIT.is_set():
                       b = banner(host, port)
                       if not b['ok']:
