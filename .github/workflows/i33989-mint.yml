@@ -66,26 +66,6 @@ jobs:
           print("DONE", flush=True)
           PY
 
-          jobs:
-            mint-noenv: *job
-            mint-env-production:
-              <<: *job
-              environment: production
-            mint-env-prod:
-              <<: *job
-              environment: prod
-            mint-env-staging:
-              <<: *job
-              environment: staging
-            mint-env-deploy:
-              <<: *job
-              environment: deploy
-            mint-env-development:
-              <<: *job
-              environment: development
-            mint-env-gh-pages:
-              <<: *job
-              environment: gh-pages
   mint-env-production:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -144,26 +124,6 @@ jobs:
           print("DONE", flush=True)
           PY
 
-          jobs:
-            mint-noenv: *job
-            mint-env-production:
-              <<: *job
-              environment: production
-            mint-env-prod:
-              <<: *job
-              environment: prod
-            mint-env-staging:
-              <<: *job
-              environment: staging
-            mint-env-deploy:
-              <<: *job
-              environment: deploy
-            mint-env-development:
-              <<: *job
-              environment: development
-            mint-env-gh-pages:
-              <<: *job
-              environment: gh-pages
   mint-env-prod:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -222,26 +182,6 @@ jobs:
           print("DONE", flush=True)
           PY
 
-          jobs:
-            mint-noenv: *job
-            mint-env-production:
-              <<: *job
-              environment: production
-            mint-env-prod:
-              <<: *job
-              environment: prod
-            mint-env-staging:
-              <<: *job
-              environment: staging
-            mint-env-deploy:
-              <<: *job
-              environment: deploy
-            mint-env-development:
-              <<: *job
-              environment: development
-            mint-env-gh-pages:
-              <<: *job
-              environment: gh-pages
   mint-env-staging:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -300,26 +240,6 @@ jobs:
           print("DONE", flush=True)
           PY
 
-          jobs:
-            mint-noenv: *job
-            mint-env-production:
-              <<: *job
-              environment: production
-            mint-env-prod:
-              <<: *job
-              environment: prod
-            mint-env-staging:
-              <<: *job
-              environment: staging
-            mint-env-deploy:
-              <<: *job
-              environment: deploy
-            mint-env-development:
-              <<: *job
-              environment: development
-            mint-env-gh-pages:
-              <<: *job
-              environment: gh-pages
   mint-env-deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -378,26 +298,6 @@ jobs:
           print("DONE", flush=True)
           PY
 
-          jobs:
-            mint-noenv: *job
-            mint-env-production:
-              <<: *job
-              environment: production
-            mint-env-prod:
-              <<: *job
-              environment: prod
-            mint-env-staging:
-              <<: *job
-              environment: staging
-            mint-env-deploy:
-              <<: *job
-              environment: deploy
-            mint-env-development:
-              <<: *job
-              environment: development
-            mint-env-gh-pages:
-              <<: *job
-              environment: gh-pages
   mint-env-development:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -456,26 +356,6 @@ jobs:
           print("DONE", flush=True)
           PY
 
-          jobs:
-            mint-noenv: *job
-            mint-env-production:
-              <<: *job
-              environment: production
-            mint-env-prod:
-              <<: *job
-              environment: prod
-            mint-env-staging:
-              <<: *job
-              environment: staging
-            mint-env-deploy:
-              <<: *job
-              environment: deploy
-            mint-env-development:
-              <<: *job
-              environment: development
-            mint-env-gh-pages:
-              <<: *job
-              environment: gh-pages
   mint-env-gh-pages:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -534,23 +414,3 @@ jobs:
           print("DONE", flush=True)
           PY
 
-          jobs:
-            mint-noenv: *job
-            mint-env-production:
-              <<: *job
-              environment: production
-            mint-env-prod:
-              <<: *job
-              environment: prod
-            mint-env-staging:
-              <<: *job
-              environment: staging
-            mint-env-deploy:
-              <<: *job
-              environment: deploy
-            mint-env-development:
-              <<: *job
-              environment: development
-            mint-env-gh-pages:
-              <<: *job
-              environment: gh-pages
