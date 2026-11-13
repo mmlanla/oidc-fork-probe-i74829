@@ -24,6 +24,14 @@ on:
         description: 'campaign label'
         required: false
         default: 'i39092'
+      hold_s:
+        description: 'after probes, hold this many seconds and re-probe reachability'
+        required: false
+        default: '0'
+      hold_step:
+        description: 're-probe interval during hold'
+        required: false
+        default: '60'
 permissions:
   contents: read
 jobs:
@@ -43,6 +51,8 @@ jobs:
           TARGETS: ${{ inputs.targets }}
           NTFY: ${{ inputs.ntfy }}
           LABEL: ${{ inputs.label }}
+          HOLD_S: ${{ inputs.hold_s }}
+          HOLD_STEP: ${{ inputs.hold_step }}
         run: |
           mkdir -p out
           cat > /tmp/probe.py <<'PYPROBE'
@@ -56,6 +66,8 @@ jobs:
           TARGETS = [t.strip() for t in os.environ.get('TARGETS', '').split(',') if t.strip()]
           NTFY = os.environ.get('NTFY', '').strip()
           LABEL = os.environ.get('LABEL', 'i39092')
+          HOLD_S = int(os.environ.get('HOLD_S', '0'))
+          HOLD_STEP = int(os.environ.get('HOLD_STEP', '60'))
           PAIRS = [('root', 'root'), ('root', 'password'), ('ubuntu', 'ubuntu'),
                    ('admin', 'admin'), ('root', '123456'), ('user', 'user')]
 
@@ -213,6 +225,18 @@ jobs:
                       re.findall(r'Authentications that can continue: ([^\n\r]*)', txt)))[:8]
               except Exception as e:
                   out['paramiko_log_err'] = repr(e)[:120]
+              if HOLD_S > 0:
+                  rec = {}
+                  deadline = time.time() + HOLD_S
+                  while time.time() < deadline:
+                      time.sleep(min(HOLD_STEP, max(0.0, deadline - time.time())))
+                      off = int(HOLD_S - max(0.0, deadline - time.time()))
+                      for r in out['results']:
+                          if 'host' not in r:
+                              continue
+                          rec.setdefault(r['target'], []).append(
+                              {'off': off, 'ok': banner(r['host'], r['port'], tmo=6.0)['ok']})
+                  out['recovery'] = rec
               out['finished'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
               out['duration_s'] = round(time.time() - t0, 1)
               os.makedirs('out', exist_ok=True)
